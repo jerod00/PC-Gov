@@ -6,10 +6,12 @@ expansion joints, skids, and related large fabricated structures), and
 emails a ranked digest every weekday morning.
 
 **Phase 1 (this build):** SAM.gov (all federal opportunities, nationwide) +
-Texas ESBD/TxSmartBuy, San Antonio, and Austin (state/local, home turf).
+San Antonio and Austin (state/local, home turf).
 **Phase 2 (not yet built):** Oklahoma, Louisiana, Missouri. See
 [Sources not automated](#sources-not-automated-yet) for what's covered by
-email alerts instead of code, and why.
+email alerts instead of code, and why — including TX ESBD/TxSmartBuy, whose
+scraper works but is disabled because the site's `robots.txt` disallows all
+crawling.
 
 ## How it works
 
@@ -91,7 +93,7 @@ Check `logs/run.log` for what happened per source, and check your inbox for the 
 
 ### Debugging a source
 
-`tx_esbd.py` was rewritten against a real HTML sample from the live site and confirmed working (parses `esbd-result-row` divs, maps agency codes to names, filters out Awarded/Closed/No Award/Cancelled postings, paginates the first 5 pages). `san_antonio.py` is still generic/heuristic table-parsing that hasn't been confirmed against a live sample. If either starts returning 0 results:
+`tx_esbd.py` was rewritten against a real HTML sample from the live site and confirmed working (parses `esbd-result-row` divs, maps agency codes to names, filters out Awarded/Closed/No Award/Cancelled postings, paginates the first 5 pages) — but it's disabled in `config.yaml` (`tx_esbd: false`) because `robots.txt` disallows crawling the site; do not re-enable it. `san_antonio.py` is still generic/heuristic table-parsing that hasn't been confirmed against a live sample, and its `robots.txt` hasn't been checked yet either — confirm that before relying on it long-term. If a source starts returning 0 results:
 
 1. Check `logs/run.log` for the specific warning/error.
 2. Open the URL from `config.yaml`'s `source_urls` section in a browser and confirm it still resolves and still shows a results table.
@@ -155,10 +157,11 @@ python -c "from src import db; c = db.connect('data/opportunities.db'); [print(r
 
 ## Sources not automated (yet)
 
-These portals aren't scraped, either because they're JS-heavy enterprise systems (fragile against plain HTTP requests), mandate login to see anything actionable, or are mid-platform-migration as of this writing. Register directly with each for email alerts as your supplement:
+These portals aren't scraped, either because they're JS-heavy enterprise systems (fragile against plain HTTP requests), mandate login to see anything actionable, disallow crawling in `robots.txt`, or are mid-platform-migration as of this writing. Register directly with each for email alerts as your supplement:
 
 | Source | Why not automated | What to do instead |
 |---|---|---|
+| TX ESBD/TxSmartBuy | The scraper (`src/sources/tx_esbd.py`) works and is tested against real page structure — but `www.txsmartbuy.com/robots.txt` disallows all crawling (`User-agent: * / Disallow: /`), so it's disabled in `config.yaml` and stays that way regardless of technical feasibility | Register for **CMBL** (Centralized Master Bidders List) vendor notifications — see the "CMBL" link in the site's Vendor menu |
 | TxDOT open lettings | Forward schedule is PDF-only; the only structured data (Socrata) is historical/awarded, not open opportunities | Subscribe at TxDOT's GovDelivery page: `public.govdelivery.com/accounts/TXDOT/subscriber/new` |
 | Dallas, Fort Worth | Bonfire — modern JS SPA, no public API | Register as a vendor on each city's Bonfire portal; enable commodity-code email notifications |
 | Houston | Beacon Bid + mandatory SAP Ariba login for solicitation details | Use the portal's "Subscribe to Agency" feature |

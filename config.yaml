@@ -163,7 +163,6 @@ scoring:
 # -----------------------------------------------------------------------------
 sources:
   sam_gov: true
-  tx_esbd: true
   san_antonio: true
   austin_rss: true
   # Phase 2 — not yet built:
@@ -171,13 +170,18 @@ sources:
   louisiana_lapac: false
   missouri_buys: false
   # Not automated — brittle/login-walled/mid-migration/no actionable open-
-  # opportunity feed. See README for the portal's own email-alert signup as
-  # your supplement. TxDOT is here (not Phase 1) because its only stable,
-  # structured data is *historical/awarded* bid tabulations — not open
-  # solicitations — so it isn't a useful automated opportunity source; the
-  # actual open letting schedule is PDF-only and best tracked via TxDOT's
-  # GovDelivery alerts instead.
+  # opportunity feed/robots.txt disallows it. See README for the portal's own
+  # email-alert signup as your supplement. TxDOT is here (not Phase 1)
+  # because its only stable, structured data is *historical/awarded* bid
+  # tabulations — not open solicitations — so it isn't a useful automated
+  # opportunity source; the actual open letting schedule is PDF-only and
+  # best tracked via TxDOT's GovDelivery alerts instead.
   txdot: false
+  # TX ESBD/TxSmartBuy: the scraper works (confirmed against real page
+  # structure) but www.txsmartbuy.com/robots.txt disallows ALL crawling
+  # (User-agent: * / Disallow: /) — do not turn this on. Use the CMBL
+  # vendor-notification signup instead (see README).
+  tx_esbd: false
   dallas_bonfire: false
   fort_worth_bonfire: false
   houston_beaconbid: false
