@@ -187,6 +187,14 @@ sources:
   # (User-agent: * / Disallow: /) — do not turn this on. Use the CMBL
   # vendor-notification signup instead (see README).
   tx_esbd: false
+  # Dallas and Fort Worth (Bonfire): CONFIRMED both
+  # dallascityhall.bonfirehub.com/robots.txt and
+  # fortworthtexas.bonfirehub.com/robots.txt are User-agent: * / Disallow: /
+  # -- same blanket opt-out as TX ESBD. Do not build scrapers for these
+  # regardless of technical feasibility; register as a vendor on each city's
+  # Bonfire portal for commodity-code email alerts instead (see README).
+  # This is likely a Bonfire-platform-wide policy, not city-specific --
+  # assume any other Bonfire-hosted city portal is the same until checked.
   dallas_bonfire: false
   fort_worth_bonfire: false
   houston_beaconbid: false

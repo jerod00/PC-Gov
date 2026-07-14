@@ -173,7 +173,7 @@ These portals aren't scraped, either because they're JS-heavy enterprise systems
 |---|---|---|
 | TX ESBD/TxSmartBuy | The scraper (`src/sources/tx_esbd.py`) works and is tested against real page structure — but `www.txsmartbuy.com/robots.txt` disallows all crawling (`User-agent: * / Disallow: /`), so it's disabled in `config.yaml` and stays that way regardless of technical feasibility | Register for **CMBL** (Centralized Master Bidders List) vendor notifications — see the "CMBL" link in the site's Vendor menu |
 | TxDOT open lettings | Forward schedule is PDF-only; the only structured data (Socrata) is historical/awarded, not open opportunities | Subscribe at TxDOT's GovDelivery page: `public.govdelivery.com/accounts/TXDOT/subscriber/new` |
-| Dallas, Fort Worth | Bonfire — modern JS SPA, no public API | Register as a vendor on each city's Bonfire portal; enable commodity-code email notifications |
+| Dallas, Fort Worth | Bonfire — `robots.txt` confirmed `Disallow: /` for both (`dallascityhall.bonfirehub.com` and `fortworthtexas.bonfirehub.com`), a blanket crawling opt-out; also a modern JS SPA even setting that aside | Register as a vendor on each city's Bonfire portal; enable commodity-code email notifications |
 | Houston | Beacon Bid + mandatory SAP Ariba login for solicitation details | Use the portal's "Subscribe to Agency" feature |
 | Arkansas | Mid-migration to SAP Ariba as of July 2026 — actively unstable | Register on the current OSP/ARBuy portal for email alerts; revisit automation after the cutover settles |
 | New Mexico | Three parallel/transitioning systems (Jaggaer, Sunshine Portal, new Euna/Bonfire network); unclear which is authoritative | Register on whichever system NM State Purchasing currently directs vendors to |
