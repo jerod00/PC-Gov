@@ -169,7 +169,7 @@ scoring:
 sources:
   sam_gov: true
   san_antonio: true
-  austin_rss: true
+  austin: true
   # Phase 2 — not yet built:
   oklahoma_omes: false
   louisiana_lapac: false
@@ -195,16 +195,16 @@ sources:
   kansas_esupplier: false
 
 # -----------------------------------------------------------------------------
-# Source URLs — several of these are best-effort/unverified since this was
-# built without the ability to browse the live sites. If a source's parser
-# starts returning 0 results, this is the first thing to check: visit the
-# URL yourself, confirm it still resolves, and update it here if the site
-# has moved. See README "Debugging a source" section.
+# Source URLs — all three active ones (sam_gov's endpoint is hardcoded, not
+# listed here) have been confirmed against real fetched pages. If a source's
+# parser starts returning 0 results, this is the first thing to check: visit
+# the URL yourself, confirm it still resolves, and update it here if the
+# site has moved. See README "Debugging a source" section.
 # -----------------------------------------------------------------------------
 source_urls:
-  tx_esbd: "https://www.txsmartbuy.com/esbd"
+  tx_esbd: "https://www.txsmartbuy.com/esbd"  # disabled (robots.txt) — kept for reference
   san_antonio: "https://webapp1.sanantonio.gov/BidContractOpps/Default.aspx"
-  austin_rss: "https://financeonline.austintexas.gov/afo/solicitations_all.cfm?format=rss"
+  austin: "https://financeonline.austintexas.gov/afo/account_services/solicitation/solicitations.cfm"
 
 email:
   digest_min_score_to_include: 25   # opportunities scoring below this are dropped entirely

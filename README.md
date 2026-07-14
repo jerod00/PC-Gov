@@ -29,7 +29,7 @@ config.yaml               # NAICS/PSC codes, keywords, scoring weights, source t
 .env / .env.example       # secrets: SAM.gov key, Gmail address/app password (never commit .env)
 run_daily.py              # entry point the scheduler calls
 src/
-  sources/                # one module per source (sam_gov.py, tx_esbd.py, san_antonio.py, austin_rss.py, html_table.py, base.py)
+  sources/                # one module per source (sam_gov.py, tx_esbd.py, san_antonio.py, austin.py, html_table.py, base.py)
   db.py                   # SQLite: opportunities, feedback, learned_weights, run_log
   geo.py                  # distance filtering for state/local sources
   scoring.py              # config-driven ranking
@@ -93,7 +93,7 @@ Check `logs/run.log` for what happened per source, and check your inbox for the 
 
 ### Debugging a source
 
-`tx_esbd.py` was rewritten against a real HTML sample from the live site and confirmed working (parses `esbd-result-row` divs, maps agency codes to names, filters out Awarded/Closed/No Award/Cancelled postings, paginates the first 5 pages) — but it's disabled in `config.yaml` (`tx_esbd: false`) because `robots.txt` disallows crawling the site; do not re-enable it. `san_antonio.py` was similarly rewritten against a real HTML sample: it's a genuine ASP.NET GridView (`ContentPlaceHolder1_gvBidContractOpps`), and paging past page 1 is a real `__doPostBack` form submission (simulated here with `requests` — no headless browser needed). Its `robots.txt` returns 404 (no restrictions declared), so it's clear to run. If a source starts returning 0 results:
+`tx_esbd.py` was rewritten against a real HTML sample from the live site and confirmed working (parses `esbd-result-row` divs, maps agency codes to names, filters out Awarded/Closed/No Award/Cancelled postings, paginates the first 5 pages) — but it's disabled in `config.yaml` (`tx_esbd: false`) because `robots.txt` disallows crawling the site; do not re-enable it. `san_antonio.py` was similarly rewritten against a real HTML sample: it's a genuine ASP.NET GridView (`ContentPlaceHolder1_gvBidContractOpps`), and paging past page 1 is a real `__doPostBack` form submission (simulated here with `requests` — no headless browser needed). Its `robots.txt` returns 404 (no restrictions declared), so it's clear to run. `austin.py` was also rewritten against a real HTML sample after the original RSS-feed guess turned out to be a wrong URL (404) — Austin Finance Online has no RSS feed; the real active-solicitations page (`.../account_services/solicitation/solicitations.cfm`) is plain server-rendered HTML with the full listing already in the initial page load, no pagination found so far. Its `robots.txt` also returns 404. If a source starts returning 0 results:
 
 1. Check `logs/run.log` for the specific warning/error.
 2. Open the URL from `config.yaml`'s `source_urls` section in a browser and confirm it still resolves and still shows a results table.
