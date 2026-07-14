@@ -1,0 +1,202 @@
+# =============================================================================
+# PC-Gov contract opportunity finder — scoring & search configuration
+#
+# Edit this file to tune search coverage and ranking without touching code.
+# Re-run is not required to pick up changes — every run_daily.py execution
+# reads this file fresh.
+# =============================================================================
+
+company:
+  name: "Palcon"
+  home_location:
+    label: "Stephenville, TX"
+    lat: 32.2207
+    lon: -98.2023
+  # State/local opportunities outside these states are dropped before scoring
+  # ever sees them. Texas is always in-radius per company judgment; the other
+  # states get a per-listing haversine distance check against radius_miles.
+  state_local_states:
+    - TX
+    - OK
+    - LA
+    - AR
+    - NM
+    - KS
+    - MO
+  radius_miles: 500
+
+# -----------------------------------------------------------------------------
+# SAM.gov search parameters (federal, nationwide — no geographic filtering)
+# -----------------------------------------------------------------------------
+sam_gov:
+  # NAICS codes worth pulling. Verify/adjust against https://www.naics.com
+  # if your product mix shifts.
+  naics_codes:
+    - "332312"  # Fabricated Structural Metal Manufacturing
+    - "332313"  # Plate Work Manufacturing (ducts, plenums, housings)
+    - "332420"  # Metal Tank (Heavy Gauge) Manufacturing
+    - "332996"  # Fabricated Pipe and Pipe Fitting Manufacturing
+    - "332999"  # All Other Miscellaneous Fabricated Metal Product Manufacturing
+    - "336413"  # Other Aircraft Parts & Auxiliary Equipment Mfg (turbine-adjacent)
+    - "333611"  # Turbine and Turbine Generator Set Units Manufacturing
+    - "238120"  # Structural Steel and Precast Concrete Contractors
+
+  # Product/Service Codes (federal contracting FSC/PSC families). These are a
+  # starting point, not gospel — cross-check against SAM.gov's PSC list and
+  # adjust. Keyword matching below is the real safety net since fabricated
+  # metal work is frequently miscoded.
+  psc_codes:
+    - "5410"  # Prefabricated and Portable Buildings
+    - "5411"  # Prefabricated Building Modules/Sections
+    - "5420"  # Bridges, Fixed and Floating
+    - "3441"  # Bending and Forming Machines
+
+  # How far back to look for newly posted/modified notices each run (days).
+  lookback_days: 1
+
+# -----------------------------------------------------------------------------
+# Keyword matching — applied to title + description across ALL sources.
+# This is what catches miscoded postings that NAICS/PSC filtering misses.
+# Weight is added to the score for each distinct keyword matched (case-insensitive,
+# word-boundary match). Tune freely; feedback.py layers small learned
+# adjustments on top of these base weights, it never overwrites them.
+# -----------------------------------------------------------------------------
+keywords:
+  high_value:      # strong signal this is squarely in our capability
+    weight: 15
+    terms:
+      - "gas turbine duct"
+      - "turbine duct"
+      - "air inlet filter housing"
+      - "inlet filter house"
+      - "expansion joint"
+      - "exhaust duct"
+      - "inlet duct"
+      - "weldment"
+      - "structural steel fabrication"
+      - "fabricated steel"
+      - "metal fabrication"
+      - "skid package"
+      - "equipment skid"
+
+  medium_value:    # plausible fit, needs a human look
+    weight: 8
+    terms:
+      - "duct"
+      - "plenum"
+      - "housing"
+      - "enclosure"
+      - "skid"
+      - "steel structure"
+      - "pressure vessel"
+      - "tank fabrication"
+      - "pipe spool"
+      - "platform structure"
+      - "equipment enclosure"
+
+  low_value:       # generic, only worth a small nudge
+    weight: 3
+    terms:
+      - "welding"
+      - "steel"
+      - "metal"
+      - "fabrication"
+      - "structural"
+
+  negative:        # subtract points — usually a false-positive magnet
+    weight: -20
+    terms:
+      - "janitorial"
+      - "landscaping"
+      - "food service"
+      - "IT services"
+      - "software"
+      - "medical supplies"
+      - "furniture"
+
+# -----------------------------------------------------------------------------
+# Scoring weights — how much each factor contributes to the final 0-100 score.
+# These are relative multipliers applied on top of the raw signals below;
+# the keyword weights above already produce the base "relevance" component.
+# -----------------------------------------------------------------------------
+scoring:
+  weights:
+    keyword_relevance: 1.0   # multiplier on summed keyword score
+    naics_psc_match: 20      # flat bonus if NAICS or PSC code matched directly
+    contract_value: 1.0      # multiplier on the normalized value score (see below)
+    set_aside_eligible: 10   # flat bonus if we qualify for the listed set-aside
+    proximity: 1.0           # multiplier on normalized proximity score
+    deadline_urgency: 1.0    # multiplier on normalized urgency score
+
+  # Contract value scoring: log-scaled so a $50k job and a $50M job don't
+  # collapse to the same bucket. Values outside this range are clamped.
+  contract_value_curve:
+    min_value: 10000
+    max_value: 50000000
+    max_points: 25
+
+  # Set-asides we can legitimately claim. Adjust to match your actual
+  # certifications (SBA size standard, HUBZone, etc.) — do not claim ones
+  # you don't qualify for.
+  qualifying_set_asides:
+    - "Total Small Business"
+    - "SBA Small"
+    - "None"        # unrestricted — always eligible
+
+  # Proximity scoring only applies to state/local opportunities (federal is
+  # nationwide by design and always scores full proximity points).
+  proximity_curve:
+    max_points: 15
+    full_points_within_miles: 100   # anything closer than this gets max points
+    radius_miles: 500               # points taper to 0 at the radius edge
+
+  # Deadline urgency: more points as the response deadline approaches, up to
+  # a point — too close to respond meaningfully gets slightly discounted.
+  deadline_curve:
+    max_points: 20
+    sweet_spot_days: 10      # days-to-deadline that scores highest
+    too_soon_days: 2         # inside this window, urgency score is discounted
+    too_soon_penalty: 0.5
+
+# -----------------------------------------------------------------------------
+# Source toggles — flip a source off without deleting its module.
+# -----------------------------------------------------------------------------
+sources:
+  sam_gov: true
+  tx_esbd: true
+  san_antonio: true
+  austin_rss: true
+  # Phase 2 — not yet built:
+  oklahoma_omes: false
+  louisiana_lapac: false
+  missouri_buys: false
+  # Not automated — brittle/login-walled/mid-migration/no actionable open-
+  # opportunity feed. See README for the portal's own email-alert signup as
+  # your supplement. TxDOT is here (not Phase 1) because its only stable,
+  # structured data is *historical/awarded* bid tabulations — not open
+  # solicitations — so it isn't a useful automated opportunity source; the
+  # actual open letting schedule is PDF-only and best tracked via TxDOT's
+  # GovDelivery alerts instead.
+  txdot: false
+  dallas_bonfire: false
+  fort_worth_bonfire: false
+  houston_beaconbid: false
+  arkansas_egp: false
+  new_mexico: false
+  kansas_esupplier: false
+
+# -----------------------------------------------------------------------------
+# Source URLs — several of these are best-effort/unverified since this was
+# built without the ability to browse the live sites. If a source's parser
+# starts returning 0 results, this is the first thing to check: visit the
+# URL yourself, confirm it still resolves, and update it here if the site
+# has moved. See README "Debugging a source" section.
+# -----------------------------------------------------------------------------
+source_urls:
+  tx_esbd: "https://www.txsmartbuy.com/esbd"
+  san_antonio: "https://webapp1.sanantonio.gov/BidContractOpps/Default.aspx"
+  austin_rss: "https://financeonline.austintexas.gov/afo/solicitations_all.cfm?format=rss"
+
+email:
+  digest_min_score_to_include: 25   # opportunities scoring below this are dropped entirely
+  max_items_per_digest: 40
