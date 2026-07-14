@@ -170,10 +170,10 @@ sources:
   sam_gov: true
   san_antonio: true
   austin: true
+  oklahoma: true
   # Phase 2 — not yet built:
-  oklahoma_omes: false
-  louisiana_lapac: false
-  missouri_buys: false
+  louisiana: false
+  missouri: false
   # Not automated — brittle/login-walled/mid-migration/no actionable open-
   # opportunity feed/robots.txt disallows it. See README for the portal's own
   # email-alert signup as your supplement. TxDOT is here (not Phase 1)
@@ -213,6 +213,7 @@ source_urls:
   tx_esbd: "https://www.txsmartbuy.com/esbd"  # disabled (robots.txt) — kept for reference
   san_antonio: "https://webapp1.sanantonio.gov/BidContractOpps/Default.aspx"
   austin: "https://financeonline.austintexas.gov/afo/account_services/solicitation/solicitations.cfm"
+  oklahoma: "https://www.ok.gov/dcs/solicit/app/solicitationSearch.php?status=open-pending"
 
 email:
   digest_min_score_to_include: 25   # opportunities scoring below this are dropped entirely
