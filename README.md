@@ -91,7 +91,7 @@ Check `logs/run.log` for what happened per source, and check your inbox for the 
 
 ### Debugging a source
 
-The Texas scrapers (`tx_esbd.py`, `san_antonio.py`) were built without live access to the sites (network restrictions in the build environment), so their table-parsing is intentionally generic/heuristic rather than tuned to confirmed markup. If one starts returning 0 results:
+`tx_esbd.py` was rewritten against a real HTML sample from the live site and confirmed working (parses `esbd-result-row` divs, maps agency codes to names, filters out Awarded/Closed/No Award/Cancelled postings, paginates the first 5 pages). `san_antonio.py` is still generic/heuristic table-parsing that hasn't been confirmed against a live sample. If either starts returning 0 results:
 
 1. Check `logs/run.log` for the specific warning/error.
 2. Open the URL from `config.yaml`'s `source_urls` section in a browser and confirm it still resolves and still shows a results table.

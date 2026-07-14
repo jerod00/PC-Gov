@@ -1,83 +1,139 @@
 """Texas ESBD (Electronic State Business Daily) via TxSmartBuy.
 
-This is the single highest-value state source (all Texas state-agency
-solicitations in one place) but also the most fragile: TxSmartBuy is a
-stateful ASP.NET WebForms app, and search/pagination normally happens via
-postback rather than plain query strings. This module only reads whatever
-the base URL's default GET renders (typically the current open-solicitations
-list). If that stops being enough (e.g. the list is paginated and later
-pages hide relevant results), this needs real browser automation (Playwright)
-instead of plain requests — flagged as a known limitation, not silently
-worked around.
+Confirmed live structure (2026-07): plain server-rendered HTML, no login,
+no postback needed for the default view — each listing is a
+`<div class="esbd-result-row">` (title link + labeled `<p><strong>Label:
+</strong> value</p>` fields), NOT a table. Pagination is a plain
+`?page=N` query string.
 
-CAVEAT: built without live access to the site (network access to .gov
-domains was unavailable in the build environment) — the table-detection
-heuristic is generic (see html_table.py) rather than tuned to confirmed
-markup. If a real run returns 0 rows, see README "Debugging a source".
-Consider TxSmartBuy's CMBL vendor-notification signup as a supplement
-regardless, since even a working scraper only sees the current snapshot.
+The default (unfiltered) view returns every solicitation ever posted,
+sorted by most-recently-updated first, across thousands of pages. We only
+need the first few pages each day — new/updated postings sort to the top,
+and dedup in db.py handles anything that overlaps across days.
+
+Listings mix live and dead postings (Posted, Addendum Posted, but also
+Awarded, Closed, No Award, Posting Cancelled) — only the live ones are kept.
+The same page also carries an agency dropdown mapping member numbers (e.g.
+"M0152") to real names (e.g. "City of San Antonio"), used to resolve a
+human-readable agency name instead of the bare code.
 """
 
 import logging
-import re
+import time
+from datetime import datetime
+from urllib.parse import urljoin
 
 import requests
 from bs4 import BeautifulSoup
 
 from src.sources.base import Opportunity, SourceError
-from src.sources.html_table import best_table, parse_date
 
 REQUEST_TIMEOUT = 30
+MAX_PAGES = 5              # ~20 rows/page; increase if daily volume outgrows this
+PAGE_DELAY_SECONDS = 1.5   # be polite between paginated requests
+LIVE_STATUSES = {"posted", "addendum posted"}
 
 
-def fetch(cfg: dict) -> list:
-    url = cfg["source_urls"]["tx_esbd"]
+def _parse_date(text: str):
+    text = (text or "").strip()
+    for fmt in ("%m/%d/%Y", "%m/%d/%y"):
+        try:
+            return datetime.strptime(text, fmt).date()
+        except ValueError:
+            continue
+    return None
+
+
+def _build_agency_map(soup: BeautifulSoup) -> dict:
+    """The agency <select>'s option values are 'Name - Number' — build a
+    {number: name} lookup so result rows (which only show the number) can
+    display a real agency name."""
+    mapping = {}
+    select = soup.find("select", attrs={"name": "agency"})
+    if not select:
+        return mapping
+    for option in select.find_all("option"):
+        value = option.get("value", "").strip()
+        if " - " not in value:
+            continue
+        name, _, number = value.rpartition(" - ")
+        mapping[number.strip()] = name.strip()
+    return mapping
+
+
+def _row_fields(row) -> dict:
+    fields = {}
+    for p in row.find_all("p"):
+        strong = p.find("strong")
+        if not strong:
+            continue
+        label = strong.get_text(strip=True).rstrip(":").strip()
+        full_text = p.get_text(" ", strip=True)
+        label_text = strong.get_text(strip=True)
+        value = full_text[len(label_text):].strip()
+        fields[label] = value
+    return fields
+
+
+def _fetch_page(base_url: str, page: int) -> BeautifulSoup:
+    url = base_url if page == 1 else f"{base_url}?page={page}"
     try:
         resp = requests.get(url, timeout=REQUEST_TIMEOUT, headers={"User-Agent": "PC-Gov-opportunity-finder/1.0"})
         resp.raise_for_status()
     except requests.RequestException as e:
         raise SourceError(f"TX ESBD fetch failed ({url}): {e}") from e
+    return BeautifulSoup(resp.text, "lxml")
 
-    soup = BeautifulSoup(resp.text, "lxml")
-    table, mapping = best_table(soup)
-    if table is None:
-        raise SourceError(
-            "TX ESBD: no recognizable solicitation table found — the page is likely "
-            "rendering results via postback/JS rather than the plain GET this scraper "
-            "reads. See README 'Debugging a source', and consider the CMBL vendor "
-            "notification signup as a supplement in the meantime."
-        )
 
+def fetch(cfg: dict) -> list:
+    base_url = cfg["source_urls"]["tx_esbd"]
     opportunities = []
-    rows = table.find_all("tr")[1:]
-    for row in rows:
-        cells = row.find_all(["td", "th"])
-        if not cells:
-            continue
-        values = {mapping[i]: cells[i].get_text(strip=True) for i in mapping if i < len(cells)}
-        link_tag = row.find("a", href=True)
-        link = link_tag["href"] if link_tag else url
-        if link.startswith("/"):
-            link = re.sub(r"(https?://[^/]+).*", r"\1", url) + link
+    agency_map = {}
 
-        bid_no = values.get("bid", "").strip()
-        title = values.get("title", "").strip()
-        if not title:
-            continue
+    for page in range(1, MAX_PAGES + 1):
+        soup = _fetch_page(base_url, page)
+        if page == 1:
+            agency_map = _build_agency_map(soup)
 
-        opportunities.append(
-            Opportunity(
-                notice_id=bid_no or title[:80],
-                source_id="tx_esbd",
-                title=title,
-                agency=values.get("agency", "Texas state agency") or "Texas state agency",
-                url=link,
-                posted_date=parse_date(values.get("posted_date", "")),
-                response_deadline=parse_date(values.get("close_date", "")),
-                state="TX",
-                raw=values,
+        rows = soup.find_all("div", class_="esbd-result-row")
+        if not rows:
+            if page == 1:
+                raise SourceError(
+                    "TX ESBD: no result rows found on page 1 — the site's markup has "
+                    "likely changed again. See README 'Debugging a source'."
+                )
+            break  # ran past the last page
+
+        for row in rows:
+            title_link = row.select_one(".esbd-result-title a")
+            if not title_link:
+                continue
+            fields = _row_fields(row)
+            status = fields.get("Status", "").strip().lower()
+            if status not in LIVE_STATUSES:
+                continue
+
+            member_number = fields.get("Agency/Texas SmartBuy Member Number", "").strip()
+            agency = agency_map.get(member_number, f"TX SmartBuy Member {member_number}" if member_number else "Texas state agency")
+
+            opportunities.append(
+                Opportunity(
+                    notice_id=fields.get("Solicitation ID", "").strip() or title_link.get_text(strip=True)[:80],
+                    source_id="tx_esbd",
+                    title=title_link.get_text(strip=True),
+                    agency=agency,
+                    url=urljoin(base_url, title_link["href"]),
+                    posted_date=_parse_date(fields.get("Posting Date", "")),
+                    response_deadline=_parse_date(fields.get("Due Date", "")),
+                    state="TX",
+                    raw=fields,
+                )
             )
-        )
 
-    logging.getLogger(__name__).info("TX ESBD returned %d rows", len(opportunities))
+        if page < MAX_PAGES:
+            time.sleep(PAGE_DELAY_SECONDS)
+
+    logging.getLogger(__name__).info(
+        "TX ESBD returned %d live opportunities across %d page(s)", len(opportunities), min(MAX_PAGES, page)
+    )
     return opportunities
