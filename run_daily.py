@@ -65,7 +65,7 @@ def run(cfg: dict, conn, sam_api_key: str, log: logging.Logger):
                 if not is_in_scope(opp.state, opp.lat, opp.lon, opp.city, cfg):
                     continue
             score, matched = scoring.score_opportunity(opp, cfg, learned_weights, today=today)
-            reason = scoring.fit_reason(opp, matched)
+            reason = scoring.fit_reason(opp, matched, cfg)
             db.upsert_scored(conn, opp, score, matched, reason, _now_iso())
             kept += 1
 

@@ -94,10 +94,23 @@ def score_opportunity(opp: Opportunity, cfg: dict, learned_weights: dict, today:
     kw_score, matched = _keyword_score(opp, cfg["keywords"], learned_weights)
 
     naics_psc_bonus = 0.0
+    naics_psc_matched = False
     if opp.naics_code and opp.naics_code in cfg["sam_gov"]["naics_codes"]:
         naics_psc_bonus = weights["naics_psc_match"]
+        naics_psc_matched = True
     elif opp.psc_code and opp.psc_code in cfg["sam_gov"]["psc_codes"]:
         naics_psc_bonus = weights["naics_psc_match"]
+        naics_psc_matched = True
+
+    # Relevance gate: proximity/deadline/value/set-aside describe HOW GOOD an
+    # opportunity is, not WHETHER it's relevant at all. Without at least one
+    # matched keyword or a configured NAICS/PSC match, there's zero evidence
+    # this listing has anything to do with our capabilities — don't let a
+    # close, no-deadline, unrestricted listing coast to a passing score on
+    # bonuses alone (this is exactly what let a flood of irrelevant City of
+    # San Antonio listings clear the digest threshold in initial testing).
+    if not matched and not naics_psc_matched:
+        return 0.0, matched
 
     value_pts = _value_score(opp.value, cfg["scoring"]["contract_value_curve"])
 
@@ -118,15 +131,19 @@ def score_opportunity(opp: Opportunity, cfg: dict, learned_weights: dict, today:
     return round(max(0.0, total), 1), matched
 
 
-def fit_reason(opp: Opportunity, matched_keywords: list) -> str:
+def fit_reason(opp: Opportunity, matched_keywords: list, cfg: dict) -> str:
     """Short human-readable reason this opportunity was surfaced, for the
-    digest email."""
+    digest email. Only cites NAICS/PSC when it actually matched a configured
+    code — otherwise showing the code implies it contributed to the score
+    when it didn't."""
     bits = []
     if matched_keywords:
         top = matched_keywords[:3]
         bits.append(f"Matches: {', '.join(top)}")
-    if opp.naics_code:
+    if opp.naics_code and opp.naics_code in cfg["sam_gov"]["naics_codes"]:
         bits.append(f"NAICS {opp.naics_code}")
+    elif opp.psc_code and opp.psc_code in cfg["sam_gov"]["psc_codes"]:
+        bits.append(f"PSC {opp.psc_code}")
     if opp.set_aside and opp.set_aside.lower() not in ("none", ""):
         bits.append(f"Set-aside: {opp.set_aside}")
     if not bits:

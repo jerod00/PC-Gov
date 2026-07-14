@@ -33,7 +33,9 @@ sam_gov:
   # if your product mix shifts.
   naics_codes:
     - "332312"  # Fabricated Structural Metal Manufacturing
+    - "332311"  # Prefabricated Metal Building and Component Manufacturing
     - "332313"  # Plate Work Manufacturing (ducts, plenums, housings)
+    - "332322"  # Sheet Metal Work Manufacturing
     - "332420"  # Metal Tank (Heavy Gauge) Manufacturing
     - "332996"  # Fabricated Pipe and Pipe Fitting Manufacturing
     - "332999"  # All Other Miscellaneous Fabricated Metal Product Manufacturing
@@ -49,6 +51,7 @@ sam_gov:
     - "5410"  # Prefabricated and Portable Buildings
     - "5411"  # Prefabricated Building Modules/Sections
     - "5420"  # Bridges, Fixed and Floating
+    - "4730"  # Miscellaneous Pipe, Tube, Hose, and Fittings
     - "3441"  # Bending and Forming Machines
 
   # How far back to look for newly posted/modified notices each run (days).
@@ -113,6 +116,8 @@ keywords:
       - "software"
       - "medical supplies"
       - "furniture"
+      - "sole source"
+      - "sole-source"   # federal notices announcing an award without competition — not something we can bid on
 
 # -----------------------------------------------------------------------------
 # Scoring weights — how much each factor contributes to the final 0-100 score.
