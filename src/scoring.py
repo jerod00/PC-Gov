@@ -23,14 +23,14 @@ def _find_matches(text: str, terms: list) -> list:
     return hits
 
 
-def _keyword_score(opp: Opportunity, keywords_cfg: dict, learned_weights: dict):
+def _keyword_score(opp: Opportunity, keywords_cfg: dict, learned_keyword_weights: dict):
     text = f"{opp.title}\n{opp.description}"
     total = 0.0
     matched = []
     for _category, spec in keywords_cfg.items():
         base_weight = spec.get("weight", 0)
         for term in _find_matches(text, spec.get("terms", [])):
-            adjustment = learned_weights.get(term, 0.0)
+            adjustment = learned_keyword_weights.get(term, 0.0)
             total += base_weight * (1 + adjustment)
             matched.append(term)
     return total, matched
@@ -86,12 +86,20 @@ def _deadline_score(deadline: Optional[date], curve_cfg: dict, today: date) -> f
     return max(0.0, frac) * max_pts
 
 
-def score_opportunity(opp: Opportunity, cfg: dict, learned_weights: dict, today: Optional[date] = None):
-    """Returns (score: float, matched_keywords: list[str])."""
+def score_opportunity(opp: Opportunity, cfg: dict, learned: dict, today: Optional[date] = None):
+    """Returns (score: float, matched_keywords: list[str]).
+
+    `learned` is db.get_learned_weights()'s output: {'keyword': {...},
+    'source': {...}, 'naics': {...}}, each mapping a key to a bounded
+    [-0.5, +0.5] adjustment nudged by accumulated feedback. Keyword
+    adjustments scale individual keyword hits; source/NAICS adjustments
+    scale the opportunity's final score, so a source or code with a track
+    record of bad feedback gets automatically deprioritized over time, not
+    just the specific words in its listings."""
     today = today or date.today()
     weights = cfg["scoring"]["weights"]
 
-    kw_score, matched = _keyword_score(opp, cfg["keywords"], learned_weights)
+    kw_score, matched = _keyword_score(opp, cfg["keywords"], learned.get("keyword", {}))
 
     naics_psc_bonus = 0.0
     naics_psc_matched = False
@@ -128,6 +136,11 @@ def score_opportunity(opp: Opportunity, cfg: dict, learned_weights: dict, today:
         + proximity_pts * weights["proximity"]
         + deadline_pts * weights["deadline_urgency"]
     )
+
+    source_adj = learned.get("source", {}).get(opp.source_id, 0.0)
+    naics_adj = learned.get("naics", {}).get(opp.naics_code, 0.0) if opp.naics_code else 0.0
+    total *= (1 + source_adj) * (1 + naics_adj)
+
     return round(max(0.0, total), 1), matched
 
 

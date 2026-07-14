@@ -43,9 +43,17 @@ CREATE TABLE IF NOT EXISTS feedback (
     FOREIGN KEY (dedup_key) REFERENCES opportunities (dedup_key)
 );
 
-CREATE TABLE IF NOT EXISTS learned_weights (
-    keyword     TEXT PRIMARY KEY,
-    adjustment  REAL NOT NULL DEFAULT 0
+-- Learned adjustments, generalized across three dimensions so feedback
+-- improves more than just individual keyword weights: a source or a NAICS
+-- code with a track record of bad feedback gets automatically dampened
+-- over time too, not just the specific words in its listings.
+--   kind: 'keyword' | 'source' | 'naics'
+--   key:  the keyword string, source_id, or NAICS code being adjusted
+CREATE TABLE IF NOT EXISTS learned_adjustments (
+    kind        TEXT NOT NULL,
+    key         TEXT NOT NULL,
+    adjustment  REAL NOT NULL DEFAULT 0,
+    PRIMARY KEY (kind, key)
 );
 
 CREATE TABLE IF NOT EXISTS run_log (
@@ -147,6 +155,11 @@ def history_since(conn: sqlite3.Connection, since_iso: str) -> list:
 
 
 def record_feedback(conn: sqlite3.Connection, dedup_key: str, verdict: str, now_iso: str):
+    """Records the verdict, then nudges learned adjustments across all three
+    dimensions for this opportunity: each matched keyword, its source, and
+    its NAICS code (when known). A source or code that keeps getting
+    thumbs-down gets automatically deprioritized over time, not just the
+    specific keywords in its listings."""
     if verdict not in ("good", "bad"):
         raise ValueError(f"verdict must be 'good' or 'bad', got {verdict!r}")
     conn.execute(
@@ -154,28 +167,39 @@ def record_feedback(conn: sqlite3.Connection, dedup_key: str, verdict: str, now_
         (dedup_key, verdict, now_iso),
     )
     row = conn.execute(
-        "SELECT matched_keywords FROM opportunities WHERE dedup_key = ?", (dedup_key,)
+        "SELECT matched_keywords, source_id, naics_code FROM opportunities WHERE dedup_key = ?", (dedup_key,)
     ).fetchone()
-    if row is None or not row["matched_keywords"]:
+    if row is None:
         return
     delta = WEIGHT_STEP if verdict == "good" else -WEIGHT_STEP
-    for kw in json.loads(row["matched_keywords"]):
-        nudge_weight(conn, kw, delta)
+    for kw in json.loads(row["matched_keywords"] or "[]"):
+        nudge_weight(conn, "keyword", kw, delta)
+    if row["source_id"]:
+        nudge_weight(conn, "source", row["source_id"], delta)
+    if row["naics_code"]:
+        nudge_weight(conn, "naics", row["naics_code"], delta)
 
 
-def nudge_weight(conn: sqlite3.Connection, keyword: str, delta: float):
+def nudge_weight(conn: sqlite3.Connection, kind: str, key: str, delta: float):
     conn.execute(
         """
-        INSERT INTO learned_weights (keyword, adjustment) VALUES (?, ?)
-        ON CONFLICT(keyword) DO UPDATE SET
+        INSERT INTO learned_adjustments (kind, key, adjustment) VALUES (?, ?, ?)
+        ON CONFLICT(kind, key) DO UPDATE SET
             adjustment = MAX(-?, MIN(?, adjustment + ?))
         """,
-        (keyword, max(-WEIGHT_BOUND, min(WEIGHT_BOUND, delta)), WEIGHT_BOUND, WEIGHT_BOUND, delta),
+        (kind, key, max(-WEIGHT_BOUND, min(WEIGHT_BOUND, delta)), WEIGHT_BOUND, WEIGHT_BOUND, delta),
     )
 
 
 def get_learned_weights(conn: sqlite3.Connection) -> dict:
-    return {row["keyword"]: row["adjustment"] for row in conn.execute("SELECT keyword, adjustment FROM learned_weights")}
+    """Returns {'keyword': {...}, 'source': {...}, 'naics': {...}}, each
+    mapping key -> adjustment. Missing keys default to 0 (no adjustment)
+    wherever scoring.py looks them up."""
+    result = {"keyword": {}, "source": {}, "naics": {}}
+    for row in conn.execute("SELECT kind, key, adjustment FROM learned_adjustments"):
+        if row["kind"] in result:
+            result[row["kind"]][row["key"]] = row["adjustment"]
+    return result
 
 
 def log_run(conn: sqlite3.Connection, started_at: str, finished_at: str, source_id: str,

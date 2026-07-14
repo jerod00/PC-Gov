@@ -136,7 +136,17 @@ No restart or redeploy needed — `run_daily.py` reads `config.yaml` fresh every
 
 ## 7. Feedback loop
 
-Each opportunity in the digest has two links: 👍 **Good match** / 👎 **Not relevant**. Clicking either opens a pre-filled email reply — just hit send, don't edit the subject line. The next day's run scans your inbox via IMAP, records the feedback, and nudges the weight of whatever keywords matched that opportunity (small steps, bounded, layered on top of — never overwriting — your `config.yaml` base weights).
+Each opportunity in the digest has two links: 👍 **Good match** / 👎 **Not relevant**. Clicking either opens a pre-filled email reply — just hit send, don't edit the subject line. The next run scans your inbox via IMAP and records the feedback (run `python run_daily.py` again any time to pick it up immediately instead of waiting for the next scheduled run).
+
+Feedback improves the system across three dimensions, not just the exact opportunity you voted on — each bounded to a small nudge (±0.5 max, layered on top of — never overwriting — your `config.yaml` base config):
+- **Keyword weights** — the specific words that matched get nudged up or down.
+- **Source trust** — a source (e.g. San Antonio) that keeps getting thumbs-down gets its *whole* future output dampened, even on listings that don't share any keywords with what you voted on.
+- **NAICS code trust** — same idea, per NAICS code.
+
+This is why a source or code with a consistently bad track record gradually surfaces less, even before you've explicitly voted on every individual listing from it. Query the current learned adjustments any time:
+```powershell
+python -c "from src import db; c = db.connect('data/opportunities.db'); [print(dict(r)) for r in c.execute('SELECT * FROM learned_adjustments')]"
+```
 
 CLI fallback, if you'd rather not use email replies (or want to backfill feedback on something):
 ```powershell
