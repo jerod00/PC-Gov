@@ -93,7 +93,7 @@ Check `logs/run.log` for what happened per source, and check your inbox for the 
 
 ### Debugging a source
 
-`tx_esbd.py` was rewritten against a real HTML sample from the live site and confirmed working (parses `esbd-result-row` divs, maps agency codes to names, filters out Awarded/Closed/No Award/Cancelled postings, paginates the first 5 pages) — but it's disabled in `config.yaml` (`tx_esbd: false`) because `robots.txt` disallows crawling the site; do not re-enable it. `san_antonio.py` is still generic/heuristic table-parsing that hasn't been confirmed against a live sample, and its `robots.txt` hasn't been checked yet either — confirm that before relying on it long-term. If a source starts returning 0 results:
+`tx_esbd.py` was rewritten against a real HTML sample from the live site and confirmed working (parses `esbd-result-row` divs, maps agency codes to names, filters out Awarded/Closed/No Award/Cancelled postings, paginates the first 5 pages) — but it's disabled in `config.yaml` (`tx_esbd: false`) because `robots.txt` disallows crawling the site; do not re-enable it. `san_antonio.py` was similarly rewritten against a real HTML sample: it's a genuine ASP.NET GridView (`ContentPlaceHolder1_gvBidContractOpps`), and paging past page 1 is a real `__doPostBack` form submission (simulated here with `requests` — no headless browser needed). Its `robots.txt` returns 404 (no restrictions declared), so it's clear to run. If a source starts returning 0 results:
 
 1. Check `logs/run.log` for the specific warning/error.
 2. Open the URL from `config.yaml`'s `source_urls` section in a browser and confirm it still resolves and still shows a results table.
