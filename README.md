@@ -179,7 +179,18 @@ These portals aren't scraped, either because they're JS-heavy enterprise systems
 | New Mexico | Three parallel/transitioning systems (Jaggaer, Sunshine Portal, new Euna/Bonfire network); unclear which is authoritative | Register on whichever system NM State Purchasing currently directs vendors to |
 | Kansas | PeopleSoft Fluid — JS/session-driven enterprise portal | Register on the eSupplier portal for bid-event email notifications |
 
-If any of these stabilize (a real API appears, or a portal moves to a simpler server-rendered system), they're straightforward to add as a new `src/sources/*.py` module following the same `Opportunity` dataclass shape as the existing ones.
+### Third-party bid aggregators — investigated, not integrated
+
+We looked at whether a third-party aggregator could cover many small counties/school districts/utility districts at once instead of one-off scrapers per agency. None panned out as a free, automatable source:
+
+| Service | Finding |
+|---|---|
+| BidNet Direct | `robots.txt`'s wildcard rule technically permits crawling most public pages, but it explicitly, individually blocks `anthropic-ai`, `ClaudeBot`, and `Claude-Web` (plus GPTBot, Google-Extended, PerplexityBot, etc.) by name. That's a deliberate, targeted signal, not something to route around with a different User-Agent string — declined on principle, not technical grounds. Free vendor registration + email alerts remain a legitimate option if you want this source. |
+| Public Purchase | `robots.txt` is genuinely permissive, but real bid data sits behind a client-side region→agency selection flow, not a single browsable page. The one shortcut endpoint found (`/gems/global/home/nationalBidList`) returned empty ("No bids at this time") when tested directly. Would require mapping the full region/agency drill-down across potentially dozens of TX agencies — not pursued given the uncertain payoff. |
+| DemandStar | The public page only exposes a "Historical Bids" widget (already-awarded/closed, confirmed via its own real API at `api.demandstar.com/contents/agency/bids`). Actually-open bids require a paid vendor subscription — confirmed at **$550/year for Texas alone**. Not a free source; a business decision for Palcon to make independently if broader paid coverage is wanted, not something this project builds against. |
+| BidPrime, GovWin IQ, Periscope S2G | All paid enterprise/SLED subscription services (roughly $400/yr–$29k/yr average, GovWin ranging up to $119k/yr). Same as DemandStar — a standalone business decision, not a build target here. |
+
+If any of these change (Public Purchase's drill-down turns out simpler than expected, DemandStar adds a genuine free tier, etc.), they're straightforward to revisit. If any of the state/local sources above stabilize (a real API appears, or a portal moves to a simpler server-rendered system), they're likewise straightforward to add as a new `src/sources/*.py` module following the same `Opportunity` dataclass shape as the existing ones.
 
 ## Reliability notes
 
