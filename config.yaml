@@ -252,6 +252,15 @@ sources:
   # Assume any other Euna-family platform (Bonfire, Ion Wave, EqualLevel,
   # DemandStar) has this same policy until individually checked.
   tarrant_county_ionwave: false
+  # Harris County (Houston's county): also Bonfire (harriscountytx.bonfirehub.com),
+  # CONFIRMED same blanket robots.txt block as every other Euna-family portal.
+  # Unlike Dallas County, Harris County's own domain
+  # (purchasing.harriscountytx.gov) has no standalone public listing to
+  # fall back on -- its "Bids-Proposals" and "Online Solicitation
+  # Opportunities" pages are just navigation/marketing content that link
+  # straight back to the blocked Bonfire portal, and its separate
+  # "Current Project Status" page redirects to a login wall. Dead end.
+  harris_county: false
   new_mexico: false
   kansas_esupplier: false
 
