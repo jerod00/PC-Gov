@@ -40,6 +40,7 @@ src/
 scripts/
   log_feedback.py         # CLI fallback: python scripts/log_feedback.py <dedup_key> good|bad
   setup_task_scheduler.ps1
+  discover_sources.py     # optional, run-by-hand: AI-assisted candidate-source report (never auto-wired in)
 data/opportunities.db     # created on first run
 logs/run.log              # created on first run
 ```
@@ -205,6 +206,20 @@ We looked at whether a third-party aggregator could cover many small counties/sc
 | BidPrime, GovWin IQ, Periscope S2G | All paid enterprise/SLED subscription services (roughly $400/yr–$29k/yr average, GovWin ranging up to $119k/yr). Same as DemandStar — a standalone business decision, not a build target here. |
 
 If any of these change (Public Purchase's drill-down turns out simpler than expected, DemandStar adds a genuine free tier, etc.), they're straightforward to revisit. If any of the state/local sources above stabilize (a real API appears, or a portal moves to a simpler server-rendered system), they're likewise straightforward to add as a new `src/sources/*.py` module following the same `Opportunity` dataclass shape as the existing ones.
+
+## 9. Occasional source discovery (optional, AI-assisted)
+
+`scripts/discover_sources.py` is a **report-only** research tool, meant to be run occasionally by hand (monthly or so) — not by the scheduled task, and not something that runs automatically:
+
+```powershell
+python scripts\discover_sources.py
+```
+
+It uses Claude (with web search) to look for state/local government procurement portals within the 500-mile bid radius that this project doesn't already cover, and that haven't already been investigated and rejected (see the tables above — it's given that list so it doesn't waste time rediscovering them). It writes a markdown report to `data/source_discovery_<date>.md` listing each candidate's likely relevance, apparent tech stack, and whatever it could find out about `robots.txt` — then stops. It never edits `config.yaml`, never writes a scraper, and never gets wired into `run_daily.py` on its own.
+
+Treat every candidate in the report as a lead, not a verified fact — the model's guesses about tech stack or robots.txt are a starting point, not a substitute for actually checking. To act on one, follow the exact same process used for every existing source in this project: check `robots.txt` yourself, fetch the real listing page, confirm the actual markup, then build a scraper against confirmed structure (see [Debugging a source](#debugging-a-source) above for the pattern).
+
+Requires `ANTHROPIC_API_KEY` (same key as the LLM relevance judgment feature); uses Claude Opus rather than Haiku since this needs real research/reasoning, not bulk classification, and only runs occasionally so the higher per-call cost doesn't add up.
 
 ## Reliability notes
 
