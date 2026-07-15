@@ -15,9 +15,21 @@
 $ErrorActionPreference = "Stop"
 
 $ProjectRoot = Split-Path -Parent $PSScriptRoot
-$PythonExe   = (Get-Command python -ErrorAction SilentlyContinue).Source
-if (-not $PythonExe) {
-    throw "python.exe not found on PATH. Install Python 3.11+ and ensure 'python' works from a new terminal, then re-run this script."
+
+# Prefer this project's own venv (where `pip install -r requirements.txt` was
+# run) over whatever `python` happens to resolve to on PATH -- a scheduled
+# task runs with no venv activated, so if PATH points at a different Python
+# install than the one with our dependencies, every run fails silently with
+# a missing-module error that nobody's watching for.
+$VenvPython = Join-Path $ProjectRoot "venv\Scripts\python.exe"
+if (Test-Path $VenvPython) {
+    $PythonExe = $VenvPython
+} else {
+    $PythonExe = (Get-Command python -ErrorAction SilentlyContinue).Source
+    if (-not $PythonExe) {
+        throw "python.exe not found on PATH, and no venv at $VenvPython. Install Python 3.11+ and either create the venv (python -m venv venv; venv\Scripts\activate; pip install -r requirements.txt) or ensure 'python' works from a new terminal, then re-run this script."
+    }
+    Write-Warning "No venv found at $VenvPython -- using PATH's python ($PythonExe). Make sure this interpreter has requirements.txt installed, or the scheduled task will fail silently every run."
 }
 
 $TaskName   = "PC-Gov Opportunity Digest"
