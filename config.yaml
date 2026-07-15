@@ -12,6 +12,17 @@ company:
     label: "Stephenville, TX"
     lat: 32.2207
     lon: -98.2023
+  # Fed verbatim to the LLM relevance judge (see llm_scoring below) — edit
+  # this over time as your product mix or exclusions change. Not used by the
+  # deterministic keyword/NAICS scoring at all.
+  capabilities_description: >
+    Palcon is a large metal fabrication shop based in Stephenville, TX. Core
+    capabilities: gas turbine ducts, air inlet filter housings, expansion
+    joints, skids, and other large fabricated metal structures/assemblies.
+    We do NOT do: retail/consumer goods, generic janitorial or facility
+    maintenance, IT/software services, medical supplies, or office furniture
+    — don't rate something relevant just because it mentions "steel" or
+    "metal" in passing if the core scope of work is unrelated.
   # State/local opportunities outside these states are dropped before scoring
   # ever sees them. Texas is always in-radius per company judgment; the other
   # states get a per-listing haversine distance check against radius_miles.
@@ -132,6 +143,7 @@ scoring:
     set_aside_eligible: 10   # flat bonus if we qualify for the listed set-aside
     proximity: 1.0           # multiplier on normalized proximity score
     deadline_urgency: 1.0    # multiplier on normalized urgency score
+    llm_relevance: 15        # bonus (scaled by the LLM's confidence 0-100%) when llm_scoring judges it relevant — see llm_scoring below
 
   # Contract value scoring: log-scaled so a $50k job and a $50M job don't
   # collapse to the same bucket. Values outside this range are clamped.
@@ -218,3 +230,23 @@ source_urls:
 email:
   digest_min_score_to_include: 25   # opportunities scoring below this are dropped entirely
   max_items_per_digest: 40
+
+# -----------------------------------------------------------------------------
+# LLM-based relevance judgment — an optional second opinion layered on top of
+# the deterministic keyword/NAICS scoring above. It can (a) rescue a genuine
+# fit that happens to use none of the configured keywords, and (b) writes the
+# plain-English "why this is a good fit" reason shown in the digest, instead
+# of just a matched-keyword list.
+#
+# Requires ANTHROPIC_API_KEY in .env — get one at https://console.anthropic.com
+# (Settings -> API Keys). Degrades gracefully to keyword/NAICS-only scoring if
+# the key isn't set, so this is fully optional; nothing else in the project
+# depends on it.
+#
+# Rough cost estimate (Haiku, at typical volume of a few dozen to ~150
+# opportunities/day): well under $1/day. This is a rough estimate, not a
+# quote — check https://www.anthropic.com/pricing for current rates.
+# -----------------------------------------------------------------------------
+llm_scoring:
+  enabled: true
+  model: "claude-haiku-4-5"

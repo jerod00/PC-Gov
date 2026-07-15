@@ -17,7 +17,7 @@ sys.path.insert(0, str(Path(__file__).resolve().parent))
 
 load_dotenv()
 
-from src import db, email_digest, feedback, logging_setup, scoring  # noqa: E402
+from src import db, email_digest, feedback, llm_scoring, logging_setup, scoring  # noqa: E402
 from src.geo import is_in_scope  # noqa: E402
 from src.sources.base import SourceError  # noqa: E402
 from src.sources import sam_gov, tx_esbd, san_antonio, austin, oklahoma  # noqa: E402
@@ -41,9 +41,17 @@ def load_config(path: str = "config.yaml") -> dict:
         return yaml.safe_load(f)
 
 
-def run(cfg: dict, conn, sam_api_key: str, log: logging.Logger):
+def run(cfg: dict, conn, sam_api_key: str, anthropic_api_key: str, log: logging.Logger):
     learned_weights = db.get_learned_weights(conn)
     today = datetime.now().date()
+
+    llm_cfg = cfg.get("llm_scoring", {})
+    llm_enabled = bool(llm_cfg.get("enabled")) and bool(anthropic_api_key)
+    if llm_cfg.get("enabled") and not anthropic_api_key:
+        log.info("llm_scoring.enabled is true but ANTHROPIC_API_KEY is not set — skipping LLM "
+                 "judgment this run, using keyword/NAICS scoring only")
+    llm_model = llm_cfg.get("model", "claude-haiku-4-5")
+    company_profile = cfg["company"]["capabilities_description"]
 
     for source_id, enabled in cfg["sources"].items():
         if not enabled or source_id not in SOURCE_FETCHERS:
@@ -65,8 +73,11 @@ def run(cfg: dict, conn, sam_api_key: str, log: logging.Logger):
             if source_id not in NATIONWIDE_SOURCES:
                 if not is_in_scope(opp.state, opp.lat, opp.lon, opp.city, cfg):
                     continue
-            score, matched = scoring.score_opportunity(opp, cfg, learned_weights, today=today)
-            reason = scoring.fit_reason(opp, matched, cfg)
+            judgment = None
+            if llm_enabled:
+                judgment = llm_scoring.judge_opportunity(opp, company_profile, anthropic_api_key, llm_model)
+            score, matched = scoring.score_opportunity(opp, cfg, learned_weights, today=today, llm_judgment=judgment)
+            reason = scoring.fit_reason(opp, matched, cfg, llm_judgment=judgment)
             db.upsert_scored(conn, opp, score, matched, reason, _now_iso())
             kept += 1
 
@@ -85,6 +96,7 @@ def main():
     gmail_app_password = os.getenv("GMAIL_APP_PASSWORD")
     recipient = os.getenv("DIGEST_RECIPIENT") or gmail_address
     sam_api_key = os.getenv("SAM_GOV_API_KEY", "")
+    anthropic_api_key = os.getenv("ANTHROPIC_API_KEY", "")
 
     if not gmail_address or not gmail_app_password:
         log.error("GMAIL_ADDRESS / GMAIL_APP_PASSWORD not set in .env — cannot send digest. Aborting.")
@@ -94,7 +106,7 @@ def main():
         processed = feedback.scan_imap_feedback(conn, gmail_address, gmail_app_password)
         log.info("Processed %d feedback replies", processed)
 
-        run(cfg, conn, sam_api_key, log)
+        run(cfg, conn, sam_api_key, anthropic_api_key, log)
 
         min_score = cfg["email"]["digest_min_score_to_include"]
         max_items = cfg["email"]["max_items_per_digest"]

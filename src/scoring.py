@@ -10,6 +10,7 @@ from datetime import date
 from typing import Optional
 
 from src.geo import distance_from_home
+from src.llm_scoring import LLMJudgment
 from src.sources.base import Opportunity
 
 
@@ -86,7 +87,8 @@ def _deadline_score(deadline: Optional[date], curve_cfg: dict, today: date) -> f
     return max(0.0, frac) * max_pts
 
 
-def score_opportunity(opp: Opportunity, cfg: dict, learned: dict, today: Optional[date] = None):
+def score_opportunity(opp: Opportunity, cfg: dict, learned: dict, today: Optional[date] = None,
+                       llm_judgment: Optional[LLMJudgment] = None):
     """Returns (score: float, matched_keywords: list[str]).
 
     `learned` is db.get_learned_weights()'s output: {'keyword': {...},
@@ -95,7 +97,12 @@ def score_opportunity(opp: Opportunity, cfg: dict, learned: dict, today: Optiona
     adjustments scale individual keyword hits; source/NAICS adjustments
     scale the opportunity's final score, so a source or code with a track
     record of bad feedback gets automatically deprioritized over time, not
-    just the specific words in its listings."""
+    just the specific words in its listings.
+
+    `llm_judgment`, when provided (see src/llm_scoring.py, opt-in via
+    config.yaml llm_scoring), can independently satisfy the relevance gate
+    below and adds a confidence-scaled bonus — this is what lets a genuine
+    fit that happens to use none of the configured keywords still surface."""
     today = today or date.today()
     weights = cfg["scoring"]["weights"]
 
@@ -110,14 +117,17 @@ def score_opportunity(opp: Opportunity, cfg: dict, learned: dict, today: Optiona
         naics_psc_bonus = weights["naics_psc_match"]
         naics_psc_matched = True
 
+    llm_relevant = llm_judgment is not None and llm_judgment.relevant
+
     # Relevance gate: proximity/deadline/value/set-aside describe HOW GOOD an
     # opportunity is, not WHETHER it's relevant at all. Without at least one
-    # matched keyword or a configured NAICS/PSC match, there's zero evidence
-    # this listing has anything to do with our capabilities — don't let a
-    # close, no-deadline, unrestricted listing coast to a passing score on
-    # bonuses alone (this is exactly what let a flood of irrelevant City of
-    # San Antonio listings clear the digest threshold in initial testing).
-    if not matched and not naics_psc_matched:
+    # matched keyword, a configured NAICS/PSC match, or a positive LLM
+    # judgment, there's zero evidence this listing has anything to do with
+    # our capabilities — don't let a close, no-deadline, unrestricted
+    # listing coast to a passing score on bonuses alone (this is exactly
+    # what let a flood of irrelevant City of San Antonio listings clear the
+    # digest threshold in initial testing).
+    if not matched and not naics_psc_matched and not llm_relevant:
         return 0.0, matched
 
     value_pts = _value_score(opp.value, cfg["scoring"]["contract_value_curve"])
@@ -128,6 +138,10 @@ def score_opportunity(opp: Opportunity, cfg: dict, learned: dict, today: Optiona
     proximity_pts = _proximity_score(opp, cfg)
     deadline_pts = _deadline_score(opp.response_deadline, cfg["scoring"]["deadline_curve"], today)
 
+    llm_bonus = 0.0
+    if llm_relevant:
+        llm_bonus = weights.get("llm_relevance", 0) * (llm_judgment.confidence / 100)
+
     total = (
         kw_score * weights["keyword_relevance"]
         + naics_psc_bonus
@@ -135,6 +149,7 @@ def score_opportunity(opp: Opportunity, cfg: dict, learned: dict, today: Optiona
         + set_aside_bonus
         + proximity_pts * weights["proximity"]
         + deadline_pts * weights["deadline_urgency"]
+        + llm_bonus
     )
 
     source_adj = learned.get("source", {}).get(opp.source_id, 0.0)
@@ -144,13 +159,17 @@ def score_opportunity(opp: Opportunity, cfg: dict, learned: dict, today: Optiona
     return round(max(0.0, total), 1), matched
 
 
-def fit_reason(opp: Opportunity, matched_keywords: list, cfg: dict) -> str:
+def fit_reason(opp: Opportunity, matched_keywords: list, cfg: dict,
+               llm_judgment: Optional[LLMJudgment] = None) -> str:
     """Short human-readable reason this opportunity was surfaced, for the
-    digest email. Only cites NAICS/PSC when it actually matched a configured
-    code — otherwise showing the code implies it contributed to the score
-    when it didn't."""
+    digest email. Prefers the LLM's plain-English reasoning when available
+    (more useful than a bare keyword list); only cites NAICS/PSC when it
+    actually matched a configured code — otherwise showing the code implies
+    it contributed to the score when it didn't."""
     bits = []
-    if matched_keywords:
+    if llm_judgment is not None and llm_judgment.relevant and llm_judgment.reasoning:
+        bits.append(llm_judgment.reasoning.strip())
+    elif matched_keywords:
         top = matched_keywords[:3]
         bits.append(f"Matches: {', '.join(top)}")
     if opp.naics_code and opp.naics_code in cfg["sam_gov"]["naics_codes"]:
