@@ -202,6 +202,7 @@ sources:
   louisiana: true
   houston: true
   dallas_county: true
+  wichita_falls: true
   # Phase 2 — not yet built:
   missouri: false
   # Not automated — brittle/login-walled/mid-migration/no actionable open-
@@ -278,6 +279,7 @@ source_urls:
   oklahoma: "https://www.ok.gov/dcs/solicit/app/solicitationSearch.php?status=open-pending"
   louisiana: "https://wwwcfprd.doa.louisiana.gov/osp/lapac/srchopen.cfm?deptno=all&catno=all&dateStart=&dateEnd=&compareDate=O&keywords=&keywordsCheck=all"
   dallas_county: "https://www.dallascounty.org/departments/purchasing/current-business-ops.php"
+  wichita_falls: "https://www.wichitafallstx.gov/Bids.aspx"
 
 email:
   digest_min_score_to_include: 25   # opportunities scoring below this are dropped entirely
