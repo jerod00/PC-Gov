@@ -19,7 +19,7 @@ Every weekday morning, `run_daily.py`:
 1. Scans your inbox via IMAP for GOOD/BAD feedback replies from the previous digest and records them.
 2. Pulls opportunities from each enabled source (SAM.gov + the Texas sources), isolating failures so one broken source never blocks the others.
 3. For state/local opportunities, checks whether the listing is within 500 miles of Stephenville, TX (Texas is always in-radius; Oklahoma/Louisiana/Arkansas/New Mexico/Kansas/Missouri opportunities get a real distance check).
-4. Scores every new opportunity against `config.yaml`'s keywords/weights and stores it in SQLite, deduped by notice number so nothing is ever emailed twice.
+4. Scores every new opportunity against `config.yaml`'s keywords/weights and stores it in SQLite, deduped by notice number so nothing is ever emailed twice. If `ANTHROPIC_API_KEY` is set and `llm_scoring.enabled` is true, each opportunity also gets a quick relevance judgment from Claude — this catches genuine fits that don't happen to use any configured keyword, and supplies a plain-English fit reason for the digest.
 5. Emails a ranked HTML digest — or a short "nothing new today" email if nothing qualified, so you know it's still running.
 
 ## Project layout
@@ -33,6 +33,7 @@ src/
   db.py                   # SQLite: opportunities, feedback, learned_weights, run_log
   geo.py                  # distance filtering for state/local sources
   scoring.py              # config-driven ranking
+  llm_scoring.py          # optional Claude-based relevance judgment layered on scoring.py
   email_digest.py         # HTML render + SMTP send
   feedback.py             # IMAP scan for feedback replies
   logging_setup.py
@@ -82,6 +83,18 @@ Edit `.env`:
   4. Create one named something like "PC-Gov Digest", copy the 16-character password (no spaces) into `GMAIL_APP_PASSWORD`.
   5. If your Workspace admin has disabled App Passwords org-wide, you'll need them to allow it for this account, or use an OAuth2 flow instead (not built here — ask if you hit this wall).
 - `DIGEST_RECIPIENT` — defaults to `GMAIL_ADDRESS` if left blank; already set to the same address.
+- `ANTHROPIC_API_KEY` — **optional.** Powers the LLM relevance judgment (below) and the occasional source-discovery script. Leave blank to skip both; the daily digest works fine without it. To get one: go to [console.anthropic.com](https://console.anthropic.com) → sign in → **Settings → API Keys → Create Key**. Copy it in. At typical daily opportunity volume this runs well under $1/day on Claude Haiku — a rough estimate, not a quote, since your actual volume varies.
+
+### LLM relevance judgment (optional)
+
+With `ANTHROPIC_API_KEY` set and `llm_scoring.enabled: true` in `config.yaml` (on by default), each new opportunity is also judged by Claude for fit against `company.capabilities_description` in `config.yaml` — a short plain-English description of what Palcon does and doesn't do. This is layered on top of, not a replacement for, the keyword/NAICS scoring:
+
+- A positive judgment can by itself satisfy the relevance gate (normally requiring a keyword or NAICS/PSC match), so a genuine fit that happens to use none of the configured terms still surfaces.
+- A positive judgment adds a bonus to the score, scaled by the model's own confidence (`scoring.weights.llm_relevance` in `config.yaml`).
+- The model's one-sentence reasoning becomes the digest's fit explanation in place of the bare matched-keyword list.
+- If the API key is missing, or any individual call fails, that opportunity just falls back to keyword/NAICS-only scoring — this never blocks a run or the digest send.
+
+Edit `company.capabilities_description` in `config.yaml` any time to sharpen what Claude considers in-scope or out-of-scope (it explicitly lists things Palcon does *not* do, to stop "mentions steel in passing" false positives).
 
 ## 4. First run (do this before scheduling anything)
 
@@ -131,6 +144,7 @@ Everything you'd want to adjust without touching code lives here:
 - **`sources`** — flip a source off entirely (e.g. if TX ESBD's scraper breaks and you want to silence the error emails until you fix it) without deleting code.
 - **`email.digest_min_score_to_include`** — raise this if you're getting too much noise; lower it if you're worried about missing marginal fits.
 - **`source_urls`** — where each scraper points; update here if a portal's URL changes.
+- **`company.capabilities_description`** / **`llm_scoring`** — see [LLM relevance judgment](#llm-relevance-judgment-optional) above.
 
 No restart or redeploy needed — `run_daily.py` reads `config.yaml` fresh every run.
 
