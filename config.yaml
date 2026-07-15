@@ -99,9 +99,15 @@ keywords:
       - "equipment skid"
       - "hydrovac"
       - "hydro excavation"
+      - "hydro-excavation"
+      - "hydroexcavation"
       - "hydrovac excavation"
+      - "hydro vac"
       - "vacuum excavation"
       - "non-destructive excavation"
+      - "soft dig"
+      - "soft digging"
+      - "potholing"
 
   medium_value:    # plausible fit, needs a human look
     weight: 8
