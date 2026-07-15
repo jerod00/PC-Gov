@@ -19,6 +19,8 @@ company:
     Palcon is a large metal fabrication shop based in Stephenville, TX. Core
     capabilities: gas turbine ducts, air inlet filter housings, expansion
     joints, skids, and other large fabricated metal structures/assemblies.
+    Palcon also offers hydrovac (vacuum) excavation services — non-destructive
+    digging for utility locating/exposure, potholing, and similar site work.
     We do NOT do: retail/consumer goods, generic janitorial or facility
     maintenance, IT/software services, medical supplies, or office furniture
     — don't rate something relevant just because it mentions "steel" or
@@ -53,6 +55,7 @@ sam_gov:
     - "336413"  # Other Aircraft Parts & Auxiliary Equipment Mfg (turbine-adjacent)
     - "333611"  # Turbine and Turbine Generator Set Units Manufacturing
     - "238120"  # Structural Steel and Precast Concrete Contractors
+    - "238910"  # Site Preparation Contractors (standard NAICS for excavation, incl. hydrovac)
 
   # Product/Service Codes (federal contracting FSC/PSC families). These are a
   # starting point, not gospel — cross-check against SAM.gov's PSC list and
@@ -64,6 +67,8 @@ sam_gov:
     - "5420"  # Bridges, Fixed and Floating
     - "4730"  # Miscellaneous Pipe, Tube, Hose, and Fittings
     - "3441"  # Bending and Forming Machines
+    # No PSC code added for hydrovac/excavation work -- rather than guess one,
+    # coverage there relies on NAICS 238910 above plus the keyword list below.
 
   # How far back to look for newly posted/modified notices each run (days).
   lookback_days: 1
@@ -92,6 +97,11 @@ keywords:
       - "metal fabrication"
       - "skid package"
       - "equipment skid"
+      - "hydrovac"
+      - "hydro excavation"
+      - "hydrovac excavation"
+      - "vacuum excavation"
+      - "non-destructive excavation"
 
   medium_value:    # plausible fit, needs a human look
     weight: 8
