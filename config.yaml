@@ -242,6 +242,16 @@ sources:
   # confuse the two: City of Dallas (Bonfire, blocked) stays disabled;
   # Dallas County (its own view-and-download page) is live.
   arkansas_egp: false
+  # Tarrant County (Fort Worth's county) uses Ion Wave, a different
+  # eProcurement vendor than Bonfire -- but Ion Wave, Bonfire, EqualLevel,
+  # and DemandStar are all now under one parent company (Euna Procurement),
+  # and CONFIRMED (2026-07): tarrantcountytx.ionwave.net/robots.txt is an
+  # identical blanket `Disallow: /`. The listing page itself is a perfectly
+  # real, scrapable ASP.NET Telerik grid with genuine current bids -- not
+  # built anyway, same principle as Dallas/Fort Worth's Bonfire block.
+  # Assume any other Euna-family platform (Bonfire, Ion Wave, EqualLevel,
+  # DemandStar) has this same policy until individually checked.
+  tarrant_county_ionwave: false
   new_mexico: false
   kansas_esupplier: false
 

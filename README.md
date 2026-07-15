@@ -202,6 +202,7 @@ These portals aren't scraped, either because they're JS-heavy enterprise systems
 | Arkansas | Mid-migration to SAP Ariba as of July 2026 — actively unstable | Register on the current OSP/ARBuy portal for email alerts; revisit automation after the cutover settles |
 | New Mexico | Three parallel/transitioning systems (Jaggaer, Sunshine Portal, new Euna/Bonfire network); unclear which is authoritative | Register on whichever system NM State Purchasing currently directs vendors to |
 | Kansas | PeopleSoft Fluid — JS/session-driven enterprise portal | Register on the eSupplier portal for bid-event email notifications |
+| Tarrant County (Fort Worth's county) | Uses Ion Wave, a different eProcurement vendor than Bonfire — but Ion Wave, Bonfire, EqualLevel, and DemandStar are all now under one parent company (Euna Procurement), and `tarrantcountytx.ionwave.net/robots.txt` is confirmed to have the identical blanket `Disallow: /`. The listing page itself is a perfectly real, scrapable ASP.NET grid with genuine current bids — not built anyway, same principle as the City of Dallas/Fort Worth Bonfire block. Assume any other Euna-family platform has this same policy until individually checked | Register on the Ion Wave portal for commodity-code email notifications |
 
 ### Third-party bid aggregators — investigated, not integrated
 
