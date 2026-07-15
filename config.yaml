@@ -207,8 +207,25 @@ sources:
   # Bonfire portal for commodity-code email alerts instead (see README).
   # This is likely a Bonfire-platform-wide policy, not city-specific --
   # assume any other Bonfire-hosted city portal is the same until checked.
+  # Also confirmed (2026-07): each city's own non-Bonfire domain has no
+  # independent live listing to fall back on. dallascityhall.com's
+  # procurement page is static SharePoint content (policy FAQs, debrief
+  # info) with no bid data at all -- the only real listing is on the
+  # blocked Bonfire subdomain. fortworthtexas.gov (a separate domain from
+  # fortworthtexas.bonfirehub.com) returns "Access Denied" from Akamai's
+  # bot-mitigation layer even with a normal browser User-Agent -- a
+  # different, tougher signal than robots.txt, and treated the same way:
+  # not something to route around.
   dallas_bonfire: false
   fort_worth_bonfire: false
+  # Houston (Beacon Bid): unlike Dallas/Fort Worth, beaconbid.com's
+  # robots.txt is genuinely permissive (only disallows /planholder/document,
+  # explicit Allow: / otherwise) -- but the open-solicitations listing page
+  # is a JS SPA (Vite-bundled grid component); the real data loads via a
+  # client-side API call this scraper can't see in the raw HTML. Under
+  # investigation: if the underlying JSON endpoint doesn't require auth
+  # (found via browser DevTools, same approach used for DemandStar and
+  # Missouri), this one may actually be buildable, unlike the others above.
   houston_beaconbid: false
   arkansas_egp: false
   new_mexico: false
