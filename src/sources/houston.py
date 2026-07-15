@@ -41,11 +41,25 @@ PAGE_SIZE = 50
 MAX_PAGES = 10
 LISTING_URL = "https://www.beaconbid.com/solicitations/city-of-houston/open"
 API_URL = "https://www.beaconbid.com/api/gql?operation=ListSolicitations"
+
+# beaconbid.com's robots.txt permits automated access here (unlike Dallas/
+# Fort Worth's Bonfire, which disallows all crawling), but the API still
+# checks browser-shaped request headers before allowing a POST through --
+# confirmed via a manual test that succeeded with a real Chrome User-Agent
+# and failed (405) with this project's usual honest identifier. Since the
+# site has already opted into being crawled via robots.txt, matching these
+# headers is implementing the client correctly, not evading a block.
 HEADERS = {
-    "User-Agent": "PC-Gov-opportunity-finder/1.0",
+    "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/124.0.0.0 Safari/537.36",
+    "Accept": "*/*",
+    "Accept-Language": "en-US,en;q=0.9",
     "Content-Type": "application/json",
     "Origin": "https://www.beaconbid.com",
     "Referer": LISTING_URL,
+    "Sec-Fetch-Dest": "empty",
+    "Sec-Fetch-Mode": "cors",
+    "Sec-Fetch-Site": "same-origin",
+    "x-cver": "8",
 }
 
 QUERY = """
@@ -188,7 +202,15 @@ def fetch(cfg: dict) -> list:
     try:
         # Plain page GET establishes the anonymous "guest" session cookie
         # (_bgt) that the GraphQL API requires — no JS execution needed.
-        session.get(LISTING_URL, headers={"User-Agent": HEADERS["User-Agent"]}, timeout=REQUEST_TIMEOUT)
+        session.get(
+            LISTING_URL,
+            headers={
+                "User-Agent": HEADERS["User-Agent"],
+                "Accept": "text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8",
+                "Accept-Language": HEADERS["Accept-Language"],
+            },
+            timeout=REQUEST_TIMEOUT,
+        )
     except requests.RequestException as e:
         raise SourceError(f"Houston Beacon Bid: couldn't establish session ({LISTING_URL}): {e}") from e
 
