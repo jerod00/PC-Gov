@@ -56,6 +56,14 @@ venv\Scripts\activate
 pip install -r requirements.txt
 ```
 
+**If you're on a corporate/managed Windows machine**, requests to some `.gov` sites may fail with `SSLError` / `CERTIFICATE_VERIFY_FAILED: self-signed certificate in certificate chain` — this happens when antivirus or a corporate proxy does HTTPS inspection, re-signing traffic with a corporate root certificate that Python doesn't trust by default (even though Windows and your browser do). Fix it by installing one more package into this same venv:
+
+```powershell
+pip install pip-system-certs
+```
+
+This patches Python to trust whatever certificates Windows itself trusts, instead of only the bundled `certifi` list. **Remember this is per-venv** — if you ever delete and recreate `venv\` (e.g. rebuilding it for the scheduled task), you'll need to re-run this install, or sources on affected domains will start failing with the same error again.
+
 ## 2. Get a free SAM.gov API key
 
 1. Go to [sam.gov](https://sam.gov) and sign in (create a free account if you don't have one — "Sign In" top right, then "Create an Account").
