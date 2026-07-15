@@ -201,6 +201,7 @@ sources:
   oklahoma: true
   louisiana: true
   houston: true
+  dallas_county: true
   # Phase 2 — not yet built:
   missouri: false
   # Not automated — brittle/login-walled/mid-migration/no actionable open-
@@ -235,6 +236,11 @@ sources:
   # not something to route around.
   dallas_bonfire: false
   fort_worth_bonfire: false
+  # NOTE: Dallas COUNTY is a separate government entity from the City of
+  # Dallas above, with its own domain (dallascounty.org) and a working
+  # source -- see `dallas_county: true` in the active list up top. Don't
+  # confuse the two: City of Dallas (Bonfire, blocked) stays disabled;
+  # Dallas County (its own view-and-download page) is live.
   arkansas_egp: false
   new_mexico: false
   kansas_esupplier: false
@@ -252,6 +258,7 @@ source_urls:
   austin: "https://financeonline.austintexas.gov/afo/account_services/solicitation/solicitations.cfm"
   oklahoma: "https://www.ok.gov/dcs/solicit/app/solicitationSearch.php?status=open-pending"
   louisiana: "https://wwwcfprd.doa.louisiana.gov/osp/lapac/srchopen.cfm?deptno=all&catno=all&dateStart=&dateEnd=&compareDate=O&keywords=&keywordsCheck=all"
+  dallas_county: "https://www.dallascounty.org/departments/purchasing/current-business-ops.php"
 
 email:
   digest_min_score_to_include: 25   # opportunities scoring below this are dropped entirely
