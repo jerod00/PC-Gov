@@ -262,6 +262,20 @@ sources:
   # straight back to the blocked Bonfire portal, and its separate
   # "Current Project Status" page redirects to a login wall. Dead end.
   harris_county: false
+  # San Angelo: also Bonfire (cosatx.bonfirehub.com), CONFIRMED same
+  # blanket robots.txt block -- 7th Bonfire subdomain checked this session,
+  # 7th blocked. City's own domain has no fallback listing either.
+  san_angelo: false
+  # Corpus Christi: split across two platforms, neither pursued further.
+  # "Capital Procurements" -> CivCast (civcastusa.com), an AngularJS SPA
+  # (raw HTML is just a loading shell) whose robots.txt IS permissive --
+  # same DevTools-reverse-engineering approach that worked for Houston
+  # could apply here, but CivCast's own site says a new platform version
+  # is coming (mid-migration, same instability concern that deprioritized
+  # Arkansas), so not worth the effort for one city right now. "Operational
+  # Procurements" -> an unidentified "Supplier Portal" -- couldn't even
+  # determine which vendor platform this is from the public page.
+  corpus_christi: false
   new_mexico: false
   kansas_esupplier: false
 
