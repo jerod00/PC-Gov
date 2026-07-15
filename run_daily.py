@@ -20,7 +20,7 @@ load_dotenv()
 from src import db, email_digest, feedback, llm_scoring, logging_setup, scoring  # noqa: E402
 from src.geo import is_in_scope  # noqa: E402
 from src.sources.base import SourceError  # noqa: E402
-from src.sources import sam_gov, tx_esbd, san_antonio, austin, oklahoma  # noqa: E402
+from src.sources import sam_gov, tx_esbd, san_antonio, austin, oklahoma, louisiana  # noqa: E402
 
 SOURCE_FETCHERS = {
     "sam_gov": lambda cfg, api_key: sam_gov.fetch(cfg, api_key),
@@ -28,6 +28,7 @@ SOURCE_FETCHERS = {
     "san_antonio": lambda cfg, api_key: san_antonio.fetch(cfg),
     "austin": lambda cfg, api_key: austin.fetch(cfg),
     "oklahoma": lambda cfg, api_key: oklahoma.fetch(cfg),
+    "louisiana": lambda cfg, api_key: louisiana.fetch(cfg),
 }
 NATIONWIDE_SOURCES = {"sam_gov"}  # skip the state/local geo gate entirely
 

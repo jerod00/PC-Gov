@@ -183,8 +183,8 @@ sources:
   san_antonio: true
   austin: true
   oklahoma: true
+  louisiana: true
   # Phase 2 — not yet built:
-  louisiana: false
   missouri: false
   # Not automated — brittle/login-walled/mid-migration/no actionable open-
   # opportunity feed/robots.txt disallows it. See README for the portal's own
@@ -226,6 +226,7 @@ source_urls:
   san_antonio: "https://webapp1.sanantonio.gov/BidContractOpps/Default.aspx"
   austin: "https://financeonline.austintexas.gov/afo/account_services/solicitation/solicitations.cfm"
   oklahoma: "https://www.ok.gov/dcs/solicit/app/solicitationSearch.php?status=open-pending"
+  louisiana: "https://wwwcfprd.doa.louisiana.gov/osp/lapac/srchopen.cfm?deptno=all&catno=all&dateStart=&dateEnd=&compareDate=O&keywords=&keywordsCheck=all"
 
 email:
   digest_min_score_to_include: 25   # opportunities scoring below this are dropped entirely
