@@ -91,7 +91,7 @@ Edit `.env`:
   3. Search for **App Passwords** (or go directly to [myaccount.google.com/apppasswords](https://myaccount.google.com/apppasswords)).
   4. Create one named something like "PC-Gov Digest", copy the 16-character password (no spaces) into `GMAIL_APP_PASSWORD`.
   5. If your Workspace admin has disabled App Passwords org-wide, you'll need them to allow it for this account, or use an OAuth2 flow instead (not built here — ask if you hit this wall).
-- `DIGEST_RECIPIENT` — defaults to `GMAIL_ADDRESS` if left blank; already set to the same address.
+- `DIGEST_RECIPIENT` — defaults to `GMAIL_ADDRESS` if left blank. Comma-separate multiple addresses to send the digest to more than one person (e.g. `jerod.mund@palconltd.com,amund@palconltd.com`). Feedback links always reply back to `GMAIL_ADDRESS`'s own inbox regardless of how many people are listed here — every recipient's thumbs-up/down still gets picked up by the next run's IMAP scan.
 - `ANTHROPIC_API_KEY` — **optional.** Powers the LLM relevance judgment (below) and the occasional source-discovery script. Leave blank to skip both; the daily digest works fine without it. To get one: go to [console.anthropic.com](https://console.anthropic.com) → sign in → **Settings → API Keys → Create Key**. Copy it in. At typical daily opportunity volume this runs well under $1/day on Claude Haiku — a rough estimate, not a quote, since your actual volume varies.
 
 ### LLM relevance judgment (optional)

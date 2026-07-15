@@ -29,9 +29,9 @@ def _format_deadline(deadline_str):
     return deadline_str or "Not listed"
 
 
-def _row_html(row: dict, recipient: str) -> str:
-    good_link = _feedback_link(recipient, row["dedup_key"], "good")
-    bad_link = _feedback_link(recipient, row["dedup_key"], "bad")
+def _row_html(row: dict, feedback_address: str) -> str:
+    good_link = _feedback_link(feedback_address, row["dedup_key"], "good")
+    bad_link = _feedback_link(feedback_address, row["dedup_key"], "bad")
     return f"""
     <tr style="border-bottom:1px solid #ddd;">
       <td style="padding:12px;">
@@ -58,7 +58,11 @@ def _row_html(row: dict, recipient: str) -> str:
     """
 
 
-def build_html(rows: list, recipient: str) -> str:
+def build_html(rows: list, feedback_address: str) -> str:
+    """feedback_address is always the IMAP-monitored Gmail account (GMAIL_ADDRESS),
+    never the digest's (possibly multi-address) recipient list — feedback.py only
+    scans that one mailbox, so every feedback link must resolve back to it
+    regardless of how many people the digest itself goes out to."""
     if not rows:
         return """
         <html><body style="font-family:Arial,sans-serif;">
@@ -66,7 +70,7 @@ def build_html(rows: list, recipient: str) -> str:
           <p>No new relevant opportunities today. The system ran fine — nothing new matched your criteria.</p>
         </body></html>
         """
-    items = "\n".join(_row_html(r, recipient) for r in rows)
+    items = "\n".join(_row_html(r, feedback_address) for r in rows)
     return f"""
     <html><body style="font-family:Arial,sans-serif;max-width:800px;margin:0 auto;">
       <h2 style="color:#1a4d8f;">PC-Gov Opportunity Digest — {len(rows)} new opportunit{'y' if len(rows) == 1 else 'ies'}</h2>
@@ -81,14 +85,14 @@ def build_html(rows: list, recipient: str) -> str:
     """
 
 
-def send_digest(html: str, subject: str, gmail_address: str, gmail_app_password: str, recipient: str):
+def send_digest(html: str, subject: str, gmail_address: str, gmail_app_password: str, recipients: list):
     msg = MIMEMultipart("alternative")
     msg["Subject"] = subject
     msg["From"] = gmail_address
-    msg["To"] = recipient
+    msg["To"] = ", ".join(recipients)
     msg.attach(MIMEText(html, "html"))
 
     with smtplib.SMTP(SMTP_HOST, SMTP_PORT, timeout=30) as server:
         server.starttls()
         server.login(gmail_address, gmail_app_password)
-        server.sendmail(gmail_address, [recipient], msg.as_string())
+        server.sendmail(gmail_address, recipients, msg.as_string())

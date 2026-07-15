@@ -95,7 +95,7 @@ def main():
     db_path = os.getenv("DB_PATH", "data/opportunities.db")
     gmail_address = os.getenv("GMAIL_ADDRESS")
     gmail_app_password = os.getenv("GMAIL_APP_PASSWORD")
-    recipient = os.getenv("DIGEST_RECIPIENT") or gmail_address
+    recipients = [addr.strip() for addr in (os.getenv("DIGEST_RECIPIENT") or gmail_address or "").split(",") if addr.strip()]
     sam_api_key = os.getenv("SAM_GOV_API_KEY", "")
     anthropic_api_key = os.getenv("ANTHROPIC_API_KEY", "")
 
@@ -113,7 +113,7 @@ def main():
         max_items = cfg["email"]["max_items_per_digest"]
         rows = db.unemailed_new(conn, min_score=min_score)[:max_items]
 
-        html = email_digest.build_html(rows, recipient)
+        html = email_digest.build_html(rows, gmail_address)
         today_str = datetime.now().strftime("%Y-%m-%d")
         subject = (
             f"PC-Gov Opportunity Digest — {today_str} — {len(rows)} new"
@@ -122,8 +122,8 @@ def main():
         )
 
         try:
-            email_digest.send_digest(html, subject, gmail_address, gmail_app_password, recipient)
-            log.info("Digest sent to %s (%d opportunities)", recipient, len(rows))
+            email_digest.send_digest(html, subject, gmail_address, gmail_app_password, recipients)
+            log.info("Digest sent to %s (%d opportunities)", ", ".join(recipients), len(rows))
         except Exception:
             log.exception("Failed to send digest email")
             sys.exit(1)
