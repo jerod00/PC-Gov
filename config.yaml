@@ -369,6 +369,7 @@ sources:
   dallas_county: true
   wichita_falls: true
   dallas_bonfire: true
+  fort_worth_bonfire: true
   # Phase 2 — not yet built:
   missouri: false
   # Not automated — brittle/login-walled/mid-migration/no actionable open-
@@ -391,30 +392,29 @@ sources:
   # long treated "Bonfire-hosted portal" as a hard stop regardless of
   # technical feasibility, on the assumption it was one platform-wide
   # policy. That assumption turned out to be wrong, or at least not
-  # durable: re-checked live 2026-07-20, dallascityhall.bonfirehub.com's
-  # robots.txt now reads `User-agent: * / Disallow:` (empty -- nothing
-  # blocked), and its public "Opportunity RSS Feed"
-  # (https://dallascityhall.bonfirehub.com/opportunities/rss -- an
-  # intentionally public, Bonfire-documented feed, not a reverse-engineered
-  # endpoint) was confirmed live with real current solicitations. See
-  # src/sources/dallas_bonfire.py, now enabled above (`dallas_bonfire:
-  # true`). fortworthtexas.bonfirehub.com was NOT re-checked as part of
-  # this -- one Bonfire org relaxing its policy is not evidence another
-  # did, so Fort Worth (and every other Bonfire-family portal below: Harris
-  # County, San Angelo, Tarrant County/Ion Wave) stays disabled until each
-  # is individually re-checked against its own live robots.txt, same
-  # discipline as every other source in this project. Also still true as
-  # of the original check (2026-07): fortworthtexas.gov (a separate domain
-  # from fortworthtexas.bonfirehub.com) returns "Access Denied" from
+  # durable: re-checked live 2026-07-20, BOTH orgs' robots.txt now reads
+  # `User-agent: * / Disallow:` (empty -- nothing blocked), and both public
+  # "Opportunity RSS Feeds" (https://<org>.bonfirehub.com/opportunities/rss
+  # -- an intentionally public, Bonfire-documented feed, not a
+  # reverse-engineered endpoint) were confirmed live with real current
+  # solicitations. See src/sources/bonfire_rss.py (shared fetch/parse
+  # logic) and dallas_bonfire.py / fort_worth_bonfire.py (thin per-org
+  # wrappers), both enabled above. Every OTHER Bonfire-family portal below
+  # (Harris County, San Angelo, Tarrant County/Ion Wave) stays disabled
+  # until each is individually re-checked against its own live robots.txt
+  # -- two Bonfire orgs relaxing their policy is still not evidence a third
+  # did, same discipline as every other source in this project. Also still
+  # true as of the original check (2026-07): fortworthtexas.gov (a separate
+  # domain from fortworthtexas.bonfirehub.com) returns "Access Denied" from
   # Akamai's bot-mitigation layer regardless of robots.txt -- a different,
-  # tougher signal, treated the same way: not something to route around.
-  fort_worth_bonfire: false
+  # tougher signal, but irrelevant here since the Bonfire subdomain (not
+  # the main city domain) is the real bid data source anyway.
   # NOTE: Dallas COUNTY is a separate government entity from the City of
   # Dallas above, with its own domain (dallascounty.org) and a working
   # source -- see `dallas_county: true` in the active list up top. Don't
-  # confuse the two: City of Dallas is now `dallas_bonfire: true` (RSS
-  # feed) above; Dallas County (its own view-and-download page) is a
-  # separate, also-live source.
+  # confuse the two: City of Dallas is `dallas_bonfire: true` (RSS feed)
+  # above; Dallas County (its own view-and-download page) is a separate,
+  # also-live source.
   arkansas_egp: false
   # Tarrant County (Fort Worth's county) uses Ion Wave, a different
   # eProcurement vendor than Bonfire -- but Ion Wave, Bonfire, EqualLevel,
@@ -468,6 +468,7 @@ source_urls:
   dallas_county: "https://www.dallascounty.org/departments/purchasing/current-business-ops.php"
   wichita_falls: "https://www.wichitafallstx.gov/Bids.aspx"
   dallas_bonfire: "https://dallascityhall.bonfirehub.com/opportunities/rss"
+  fort_worth_bonfire: "https://fortworthtexas.bonfirehub.com/opportunities/rss"
 
 email:
   digest_min_score_to_include: 25   # opportunities scoring below this are dropped entirely

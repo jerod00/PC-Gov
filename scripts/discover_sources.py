@@ -52,7 +52,7 @@ ALREADY_KNOWN = [
     "Texas ESBD / TxSmartBuy (robots.txt disallows crawling, disabled)",
     "TxDOT open lettings (PDF-only forward schedule)",
     "Dallas, TX Bonfire portal (public Opportunity RSS feed, source built)",
-    "Fort Worth, TX Bonfire portal (robots.txt disallows crawling)",
+    "Fort Worth, TX Bonfire portal (public Opportunity RSS feed, source built)",
     "Houston, TX Beacon Bid / SAP Ariba (login-gated)",
     "Arkansas state purchasing (mid-migration to SAP Ariba as of mid-2026)",
     "New Mexico state purchasing (three parallel/transitioning systems)",
