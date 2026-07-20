@@ -370,6 +370,8 @@ sources:
   wichita_falls: true
   dallas_bonfire: true
   fort_worth_bonfire: true
+  harris_county: true
+  san_angelo: true
   # Phase 2 — not yet built:
   missouri: false
   # Not automated — brittle/login-walled/mid-migration/no actionable open-
@@ -385,30 +387,31 @@ sources:
   # (User-agent: * / Disallow: /) — do not turn this on. Use the CMBL
   # vendor-notification signup instead (see README).
   tx_esbd: false
-  # Dallas and Fort Worth (Bonfire): originally BOTH confirmed blocked
-  # (dallascityhall.bonfirehub.com/robots.txt and
-  # fortworthtexas.bonfirehub.com/robots.txt were User-agent: * / Disallow:
-  # /, the same blanket opt-out as TX ESBD), which is why this project
+  # Bonfire/Euna-family portals: ALL of these were originally confirmed
+  # blocked (blanket `robots.txt` `Disallow: /`), which is why this project
   # long treated "Bonfire-hosted portal" as a hard stop regardless of
   # technical feasibility, on the assumption it was one platform-wide
-  # policy. That assumption turned out to be wrong, or at least not
-  # durable: re-checked live 2026-07-20, BOTH orgs' robots.txt now reads
-  # `User-agent: * / Disallow:` (empty -- nothing blocked), and both public
-  # "Opportunity RSS Feeds" (https://<org>.bonfirehub.com/opportunities/rss
-  # -- an intentionally public, Bonfire-documented feed, not a
-  # reverse-engineered endpoint) were confirmed live with real current
-  # solicitations. See src/sources/bonfire_rss.py (shared fetch/parse
-  # logic) and dallas_bonfire.py / fort_worth_bonfire.py (thin per-org
-  # wrappers), both enabled above. Every OTHER Bonfire-family portal below
-  # (Harris County, San Angelo, Tarrant County/Ion Wave) stays disabled
-  # until each is individually re-checked against its own live robots.txt
-  # -- two Bonfire orgs relaxing their policy is still not evidence a third
-  # did, same discipline as every other source in this project. Also still
-  # true as of the original check (2026-07): fortworthtexas.gov (a separate
-  # domain from fortworthtexas.bonfirehub.com) returns "Access Denied" from
-  # Akamai's bot-mitigation layer regardless of robots.txt -- a different,
-  # tougher signal, but irrelevant here since the Bonfire subdomain (not
-  # the main city domain) is the real bid data source anyway.
+  # policy. Re-checked live, one org at a time, 2026-07-20: City of Dallas,
+  # City of Fort Worth, Harris County, and San Angelo are now ALL open
+  # (`Disallow:` empty), each with a genuinely public per-organization
+  # "Opportunity RSS Feed" (https://<org>.bonfirehub.com/opportunities/rss
+  # -- Bonfire-documented, not reverse-engineered). Harris County's feed
+  # came back with a large batch of real current solicitations across
+  # multiple departments/precincts; San Angelo's feed loads and is
+  # well-formed but currently has zero open items (an empty board, not a
+  # broken feed -- same case seen with Wichita Falls early in this
+  # project). Tarrant County (Ion Wave, a different platform under the
+  # same Euna Procurement parent) was independently re-checked the SAME
+  # day and found STILL blocked (`Disallow: /`) -- four other orgs
+  # changing policy is still not evidence a fifth, different-platform org
+  # did too. See src/sources/bonfire_rss.py (shared fetch/parse logic) and
+  # dallas_bonfire.py / fort_worth_bonfire.py / harris_county_bonfire.py /
+  # san_angelo_bonfire.py (thin per-org wrappers), all enabled above.
+  # fortworthtexas.gov (a separate domain from fortworthtexas.bonfirehub.com)
+  # still returns "Access Denied" from Akamai's bot-mitigation layer
+  # regardless of robots.txt, and purchasing.harriscountytx.gov still has
+  # no standalone listing of its own -- both irrelevant now since each
+  # county/city's Bonfire subdomain is the actual data source anyway.
   # NOTE: Dallas COUNTY is a separate government entity from the City of
   # Dallas above, with its own domain (dallascounty.org) and a working
   # source -- see `dallas_county: true` in the active list up top. Don't
@@ -418,27 +421,16 @@ sources:
   arkansas_egp: false
   # Tarrant County (Fort Worth's county) uses Ion Wave, a different
   # eProcurement vendor than Bonfire -- but Ion Wave, Bonfire, EqualLevel,
-  # and DemandStar are all now under one parent company (Euna Procurement),
-  # and CONFIRMED (2026-07): tarrantcountytx.ionwave.net/robots.txt is an
-  # identical blanket `Disallow: /`. The listing page itself is a perfectly
-  # real, scrapable ASP.NET Telerik grid with genuine current bids -- not
-  # built anyway, same principle as Dallas/Fort Worth's Bonfire block.
-  # Assume any other Euna-family platform (Bonfire, Ion Wave, EqualLevel,
-  # DemandStar) has this same policy until individually checked.
+  # and DemandStar are all now under one parent company (Euna Procurement).
+  # Re-checked live 2026-07-20 (same round as the Bonfire re-checks above):
+  # tarrantcountytx.ionwave.net/robots.txt is STILL an identical blanket
+  # `Disallow: /` -- unlike Bonfire, Ion Wave's policy has NOT relaxed.
+  # The listing page itself is a perfectly real, scrapable ASP.NET Telerik
+  # grid with genuine current bids -- not built anyway, same as any other
+  # robots.txt-blocked source in this project. Ion Wave also has no known
+  # public RSS-feed equivalent to Bonfire's, so even if it opened up this
+  # would need a real page scrape, not a feed parse.
   tarrant_county_ionwave: false
-  # Harris County (Houston's county): also Bonfire (harriscountytx.bonfirehub.com),
-  # CONFIRMED same blanket robots.txt block as every other Euna-family portal.
-  # Unlike Dallas County, Harris County's own domain
-  # (purchasing.harriscountytx.gov) has no standalone public listing to
-  # fall back on -- its "Bids-Proposals" and "Online Solicitation
-  # Opportunities" pages are just navigation/marketing content that link
-  # straight back to the blocked Bonfire portal, and its separate
-  # "Current Project Status" page redirects to a login wall. Dead end.
-  harris_county: false
-  # San Angelo: also Bonfire (cosatx.bonfirehub.com), CONFIRMED same
-  # blanket robots.txt block -- 7th Bonfire subdomain checked this session,
-  # 7th blocked. City's own domain has no fallback listing either.
-  san_angelo: false
   # Corpus Christi: split across two platforms, neither pursued further.
   # "Capital Procurements" -> CivCast (civcastusa.com), an AngularJS SPA
   # (raw HTML is just a loading shell) whose robots.txt IS permissive --
@@ -469,6 +461,8 @@ source_urls:
   wichita_falls: "https://www.wichitafallstx.gov/Bids.aspx"
   dallas_bonfire: "https://dallascityhall.bonfirehub.com/opportunities/rss"
   fort_worth_bonfire: "https://fortworthtexas.bonfirehub.com/opportunities/rss"
+  harris_county: "https://harriscountytx.bonfirehub.com/opportunities/rss"
+  san_angelo: "https://cosatx.bonfirehub.com/opportunities/rss"
 
 email:
   digest_min_score_to_include: 25   # opportunities scoring below this are dropped entirely
