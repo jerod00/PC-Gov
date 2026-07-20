@@ -372,6 +372,10 @@ sources:
   fort_worth_bonfire: true
   harris_county: true
   san_angelo: true
+  waco_bonfire: true
+  amarillo_bonfire: true
+  port_of_galveston_bonfire: true
+  galveston: true
   # Phase 2 — not yet built:
   missouri: false
   # Not automated — brittle/login-walled/mid-migration/no actionable open-
@@ -392,32 +396,55 @@ sources:
   # long treated "Bonfire-hosted portal" as a hard stop regardless of
   # technical feasibility, on the assumption it was one platform-wide
   # policy. Re-checked live, one org at a time, 2026-07-20: City of Dallas,
-  # City of Fort Worth, Harris County, and San Angelo are now ALL open
-  # (`Disallow:` empty), each with a genuinely public per-organization
-  # "Opportunity RSS Feed" (https://<org>.bonfirehub.com/opportunities/rss
-  # -- Bonfire-documented, not reverse-engineered). Harris County's feed
-  # came back with a large batch of real current solicitations across
-  # multiple departments/precincts; San Angelo's feed loads and is
-  # well-formed but currently has zero open items (an empty board, not a
-  # broken feed -- same case seen with Wichita Falls early in this
-  # project). Tarrant County (Ion Wave, a different platform under the
-  # same Euna Procurement parent) was independently re-checked the SAME
-  # day and found STILL blocked (`Disallow: /`) -- four other orgs
-  # changing policy is still not evidence a fifth, different-platform org
-  # did too. See src/sources/bonfire_rss.py (shared fetch/parse logic) and
+  # City of Fort Worth, Harris County, San Angelo, City of Waco, City of
+  # Amarillo, and the Port of Galveston are now ALL open (`Disallow:`
+  # empty), each with a genuinely public per-organization "Opportunity RSS
+  # Feed" (https://<org>.bonfirehub.com/opportunities/rss -- Bonfire-
+  # documented, not reverse-engineered). Harris County's feed came back
+  # with a large batch of real current solicitations across multiple
+  # departments/precincts; San Angelo's feed loads and is well-formed but
+  # currently has zero open items (an empty board, not a broken feed --
+  # same case seen with Wichita Falls early in this project). Waco,
+  # Amarillo, and Port of Galveston each returned real current
+  # solicitations too. Tarrant County (Ion Wave, a different platform
+  # under the same Euna Procurement parent), Midland's Bonfire subdomain,
+  # and Galveston COUNTY's Bonfire subdomain were independently re-checked
+  # the SAME round and found STILL blocked (`Disallow: /`) -- other orgs
+  # changing policy is still not evidence any of these three did too; do
+  # not enable them without their own fresh robots.txt check. See
+  # src/sources/bonfire_rss.py (shared fetch/parse logic) and
   # dallas_bonfire.py / fort_worth_bonfire.py / harris_county_bonfire.py /
-  # san_angelo_bonfire.py (thin per-org wrappers), all enabled above.
-  # fortworthtexas.gov (a separate domain from fortworthtexas.bonfirehub.com)
-  # still returns "Access Denied" from Akamai's bot-mitigation layer
-  # regardless of robots.txt, and purchasing.harriscountytx.gov still has
-  # no standalone listing of its own -- both irrelevant now since each
-  # county/city's Bonfire subdomain is the actual data source anyway.
+  # san_angelo_bonfire.py / waco_bonfire.py / amarillo_bonfire.py /
+  # port_of_galveston_bonfire.py (thin per-org wrappers), all enabled
+  # above. fortworthtexas.gov (a separate domain from
+  # fortworthtexas.bonfirehub.com) still returns "Access Denied" from
+  # Akamai's bot-mitigation layer regardless of robots.txt, and
+  # purchasing.harriscountytx.gov still has no standalone listing of its
+  # own -- both irrelevant now since each county/city's Bonfire subdomain
+  # is the actual data source anyway.
   # NOTE: Dallas COUNTY is a separate government entity from the City of
   # Dallas above, with its own domain (dallascounty.org) and a working
   # source -- see `dallas_county: true` in the active list up top. Don't
   # confuse the two: City of Dallas is `dallas_bonfire: true` (RSS feed)
   # above; Dallas County (its own view-and-download page) is a separate,
-  # also-live source.
+  # also-live source. Likewise Galveston COUNTY (Bonfire, still blocked)
+  # is a separate entity from the Port of Galveston (Bonfire, open,
+  # `port_of_galveston_bonfire: true` above) and from the City of
+  # Galveston (CivicEngage, `galveston: true`, see below) -- three
+  # distinct governments sharing one place name.
+  #
+  # CivicEngage/CivicPlus "Bids" module: City of Galveston's `Bids.aspx`
+  # was independently confirmed live 2026-07-20 -- robots.txt has no
+  # blanket disallow, and the real page markup (checked via view-source,
+  # not just the rendered text) is byte-for-byte structurally identical to
+  # the already-working Wichita Falls scraper, so it reuses that same
+  # shared module (civicengage_bids.py, generalized from wichita_falls.py
+  # in this round) rather than a fresh guess. Odessa and Midland run the
+  # same CivicEngage platform and share an identical robots.txt with
+  # Galveston, but their own `Bids.aspx` markup was never independently
+  # fetched and inspected -- per this project's standing rule, they stay
+  # unbuilt until someone actually pulls their real page source, even
+  # though the platform itself is now proven elsewhere.
   arkansas_egp: false
   # Tarrant County (Fort Worth's county) uses Ion Wave, a different
   # eProcurement vendor than Bonfire -- but Ion Wave, Bonfire, EqualLevel,
@@ -463,6 +490,10 @@ source_urls:
   fort_worth_bonfire: "https://fortworthtexas.bonfirehub.com/opportunities/rss"
   harris_county: "https://harriscountytx.bonfirehub.com/opportunities/rss"
   san_angelo: "https://cosatx.bonfirehub.com/opportunities/rss"
+  waco_bonfire: "https://waco-texas.bonfirehub.com/opportunities/rss"
+  amarillo_bonfire: "https://amarillo.bonfirehub.com/opportunities/rss"
+  port_of_galveston_bonfire: "https://portofgalveston.bonfirehub.com/opportunities/rss"
+  galveston: "https://www.galvestontx.gov/Bids.aspx?CatID=showStatus&txtSort=Category&showAllBids=on&Status=open"
 
 email:
   digest_min_score_to_include: 25   # opportunities scoring below this are dropped entirely

@@ -20,7 +20,7 @@ load_dotenv()
 from src import db, email_digest, feedback, llm_scoring, logging_setup, scoring, semantic  # noqa: E402
 from src.geo import is_in_scope  # noqa: E402
 from src.sources.base import SourceError  # noqa: E402
-from src.sources import sam_gov, tx_esbd, san_antonio, austin, oklahoma, louisiana, houston, dallas_county, wichita_falls, dallas_bonfire, fort_worth_bonfire, harris_county_bonfire, san_angelo_bonfire  # noqa: E402
+from src.sources import sam_gov, tx_esbd, san_antonio, austin, oklahoma, louisiana, houston, dallas_county, wichita_falls, dallas_bonfire, fort_worth_bonfire, harris_county_bonfire, san_angelo_bonfire, waco_bonfire, amarillo_bonfire, port_of_galveston_bonfire, galveston  # noqa: E402
 
 SOURCE_FETCHERS = {
     "sam_gov": lambda cfg, api_key: sam_gov.fetch(cfg, api_key),
@@ -36,6 +36,10 @@ SOURCE_FETCHERS = {
     "fort_worth_bonfire": lambda cfg, api_key: fort_worth_bonfire.fetch(cfg),
     "harris_county": lambda cfg, api_key: harris_county_bonfire.fetch(cfg),
     "san_angelo": lambda cfg, api_key: san_angelo_bonfire.fetch(cfg),
+    "waco_bonfire": lambda cfg, api_key: waco_bonfire.fetch(cfg),
+    "amarillo_bonfire": lambda cfg, api_key: amarillo_bonfire.fetch(cfg),
+    "port_of_galveston_bonfire": lambda cfg, api_key: port_of_galveston_bonfire.fetch(cfg),
+    "galveston": lambda cfg, api_key: galveston.fetch(cfg),
 }
 NATIONWIDE_SOURCES = {"sam_gov"}  # skip the state/local geo gate entirely
 
