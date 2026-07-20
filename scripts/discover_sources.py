@@ -51,7 +51,7 @@ ALREADY_KNOWN = [
     "Oklahoma OMES Central Purchasing (Solicitation Search Utility)",
     "Texas ESBD / TxSmartBuy (robots.txt disallows crawling, disabled)",
     "TxDOT open lettings (PDF-only forward schedule)",
-    "Dallas, TX Bonfire portal (robots.txt disallows crawling)",
+    "Dallas, TX Bonfire portal (public Opportunity RSS feed, source built)",
     "Fort Worth, TX Bonfire portal (robots.txt disallows crawling)",
     "Houston, TX Beacon Bid / SAP Ariba (login-gated)",
     "Arkansas state purchasing (mid-migration to SAP Ariba as of mid-2026)",
