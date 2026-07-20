@@ -39,6 +39,154 @@ company:
   radius_miles: 500
 
 # -----------------------------------------------------------------------------
+# Capability profile — what Pal-Con can actually manufacture/do, as a set of
+# named capabilities rather than a single flat keyword/NAICS/PSC list. This
+# is the primary input to the "confidence score" the matching engine builds
+# per opportunity (src/scoring.py _best_capability_match): each capability
+# contributes its own keyword matches, graduated NAICS/PSC/NIGP code credit
+# (see scoring.capability_scoring below — an exact code match counts more
+# than a same-family/group match, but a same-family match is still worth
+# something, unlike the old all-or-nothing list check), and, when
+# semantic_scoring is enabled, semantic similarity between the opportunity's
+# text and this capability's `description`.
+#
+# This is ADDITIVE to (not a replacement for) the flat `keywords:` and
+# `sam_gov.naics_codes`/`psc_codes` lists below, which keep working exactly
+# as before — an opportunity only needs to pass ONE of: a flat keyword
+# match, a flat NAICS/PSC match, a capability-profile match, or a positive
+# LLM judgment, to clear the relevance gate.
+#
+# `description` doubles as the text embedded for semantic similarity, so
+# write it the way you'd explain the capability to a person unfamiliar with
+# the exact terminology a solicitation might use.
+# -----------------------------------------------------------------------------
+capabilities:
+  - name: "Turbine ducts, filter housings & expansion joints"
+    description: >
+      Gas turbine inlet and exhaust ductwork, air inlet filter housings
+      (filter houses), and expansion joints for turbine packages at power
+      plants and industrial gas turbine installations.
+    keywords:
+      - "gas turbine duct"
+      - "turbine duct"
+      - "air inlet filter housing"
+      - "inlet filter house"
+      - "expansion joint"
+      - "exhaust duct"
+      - "inlet duct"
+      - "duct"
+      - "plenum"
+      - "equipment housing"
+      - "filter housing"
+    naics_codes:
+      - "332313"  # Plate Work Manufacturing (ducts, plenums, housings)
+      - "336413"  # Other Aircraft Parts & Auxiliary Equipment Mfg (turbine-adjacent)
+      - "333611"  # Turbine and Turbine Generator Set Units Manufacturing
+    psc_codes:
+      - "4730"  # Miscellaneous Pipe, Tube, Hose, and Fittings
+    nigp_codes:
+      - "Duct"
+      - "Turbine"
+      - "Filter"
+
+  - name: "Structural steel fabrication & weldments"
+    description: >
+      Custom fabricated structural steel, weldments, and large fabricated
+      metal structures/assemblies built to engineered drawings — structural
+      steel packages, platforms, and general heavy steel fabrication work.
+    keywords:
+      - "structural steel fabrication"
+      - "fabricated steel"
+      - "metal fabrication"
+      - "weldment"
+      - "steel structure"
+      - "platform structure"
+      - "welding"
+      - "steel"
+      - "metal"
+      - "fabrication"
+      - "structural"
+    naics_codes:
+      - "332312"  # Fabricated Structural Metal Manufacturing
+      - "332311"  # Prefabricated Metal Building and Component Manufacturing
+      - "332322"  # Sheet Metal Work Manufacturing
+      - "332999"  # All Other Miscellaneous Fabricated Metal Product Manufacturing
+      - "238120"  # Structural Steel and Precast Concrete Contractors
+    psc_codes:
+      - "5410"  # Prefabricated and Portable Buildings
+      - "5411"  # Prefabricated Building Modules/Sections
+      - "5420"  # Bridges, Fixed and Floating
+    nigp_codes:
+      - "Structural Steel"
+      - "Metal Fabrication"
+      - "Welding"
+
+  - name: "Equipment skids & enclosures"
+    description: >
+      Fabricated equipment skids and equipment enclosures/housings —
+      pre-assembled mechanical/process packages mounted on a structural
+      steel base for shipment and field installation.
+    keywords:
+      - "skid package"
+      - "equipment skid"
+      - "skid"
+      - "equipment enclosure"
+      - "enclosure"
+    naics_codes:
+      - "332313"  # Plate Work Manufacturing
+      - "332999"  # All Other Miscellaneous Fabricated Metal Product Manufacturing
+    psc_codes:
+      - "5410"
+      - "5411"
+    nigp_codes:
+      - "Skid"
+      - "Equipment Enclosure"
+
+  - name: "Tanks, pressure vessels & pipe spools"
+    description: >
+      Fabricated storage tanks, pressure vessels, and pipe spools built to
+      engineered specifications for industrial/process facilities.
+    keywords:
+      - "pressure vessel"
+      - "tank fabrication"
+      - "pipe spool"
+    naics_codes:
+      - "332420"  # Metal Tank (Heavy Gauge) Manufacturing
+      - "332996"  # Fabricated Pipe and Pipe Fitting Manufacturing
+      - "332999"
+    psc_codes:
+      - "4730"
+      - "3441"  # Bending and Forming Machines
+    nigp_codes:
+      - "Tank"
+      - "Pressure Vessel"
+      - "Pipe"
+
+  - name: "Hydrovac / vacuum excavation services"
+    description: >
+      Hydrovac (hydro-excavation / vacuum excavation) services — non-
+      destructive digging for utility locating and exposure, potholing, and
+      similar site work, as a service rather than a fabricated product.
+    keywords:
+      - "hydrovac"
+      - "hydro excavation"
+      - "hydro-excavation"
+      - "hydroexcavation"
+      - "hydrovac excavation"
+      - "hydro vac"
+      - "vacuum excavation"
+      - "non-destructive excavation"
+      - "soft dig"
+      - "soft digging"
+      - "potholing"
+    naics_codes:
+      - "238910"  # Site Preparation Contractors (standard NAICS for excavation, incl. hydrovac)
+    psc_codes: []  # no PSC code added -- rather than guess one, this relies on NAICS + keywords
+    nigp_codes:
+      - "Excavation"
+      - "Utility Locating"
+
+# -----------------------------------------------------------------------------
 # SAM.gov search parameters (federal, nationwide — no geographic filtering)
 # -----------------------------------------------------------------------------
 sam_gov:
@@ -161,6 +309,7 @@ scoring:
     proximity: 1.0           # multiplier on normalized proximity score
     deadline_urgency: 1.0    # multiplier on normalized urgency score
     llm_relevance: 15        # bonus (scaled by the LLM's confidence 0-100%) when llm_scoring judges it relevant — see llm_scoring below
+    capability_relevance: 1.0  # multiplier on the best-fitting capability's raw score — see capabilities above and capability_scoring below
 
   # Contract value scoring: log-scaled so a $50k job and a $50M job don't
   # collapse to the same bucket. Values outside this range are clamped.
@@ -168,6 +317,21 @@ scoring:
     min_value: 10000
     max_value: 50000000
     max_points: 25
+
+  # How a single capability profile's own signals (keywords + NAICS/PSC/NIGP
+  # codes) turn into that capability's raw score before capability_relevance
+  # above scales it. Also governs the graduated NAICS/PSC credit applied to
+  # the flat sam_gov.naics_codes/psc_codes lists (naics_psc_match weight,
+  # above): an exact code match gets full credit, a same-family/group match
+  # (first naics_prefix_length digits, or first psc_prefix_length characters)
+  # gets partial credit instead of nothing — codes are a graduated signal,
+  # not a hard yes/no filter.
+  capability_scoring:
+    keyword_points_per_term: 10   # per distinct matched keyword within one capability
+    max_keyword_points: 30        # cap so one capability with many keyword hits doesn't dominate
+    code_match_points: 15         # points for the best of this capability's NAICS/PSC/NIGP credit
+    naics_prefix_length: 4        # NAICS digits that define an industry group
+    psc_prefix_length: 2          # PSC/FSC digits that define a supply group
 
   # Set-asides we can legitimately claim. Adjust to match your actual
   # certifications (SBA size standard, HUBZone, etc.) — do not claim ones
@@ -319,3 +483,27 @@ email:
 llm_scoring:
   enabled: true
   model: "claude-haiku-4-5"
+
+# -----------------------------------------------------------------------------
+# Semantic similarity scoring — an optional third signal, layered on top of
+# the deterministic keyword/NAICS/capability scoring above and independent
+# of llm_scoring. For each opportunity, compares its text (via Voyage AI
+# text embeddings) against every capability's `description` above and adds
+# a similarity-scaled bonus to that capability's score — this is what lets
+# a genuine fit that's phrased nothing like any configured keyword, code,
+# or capability description still surface (e.g. "gas turbine exhaust
+# plenum assembly" scoring well against "Turbine ducts, filter housings &
+# expansion joints" on meaning alone).
+#
+# Anthropic doesn't serve embeddings directly -- this uses Voyage AI (see
+# src/semantic.py). Requires VOYAGE_API_KEY in .env — get one at
+# https://dashboard.voyageai.com. Degrades gracefully to
+# keyword/NAICS/capability-code-only scoring if the key isn't set or a call
+# fails, so this is fully optional; nothing else in the project depends on
+# it.
+# -----------------------------------------------------------------------------
+semantic_scoring:
+  enabled: false
+  model: "voyage-3.5"
+  max_points: 25          # ceiling on the semantic-similarity bonus added to a capability's score
+  min_similarity: 0.3     # cosine similarity at/below this floor contributes 0 (Voyage similarities for unrelated text rarely go below ~0.2-0.3)

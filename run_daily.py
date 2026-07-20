@@ -17,7 +17,7 @@ sys.path.insert(0, str(Path(__file__).resolve().parent))
 
 load_dotenv()
 
-from src import db, email_digest, feedback, llm_scoring, logging_setup, scoring  # noqa: E402
+from src import db, email_digest, feedback, llm_scoring, logging_setup, scoring, semantic  # noqa: E402
 from src.geo import is_in_scope  # noqa: E402
 from src.sources.base import SourceError  # noqa: E402
 from src.sources import sam_gov, tx_esbd, san_antonio, austin, oklahoma, louisiana, houston, dallas_county, wichita_falls  # noqa: E402
@@ -45,7 +45,7 @@ def load_config(path: str = "config.yaml") -> dict:
         return yaml.safe_load(f)
 
 
-def run(cfg: dict, conn, sam_api_key: str, anthropic_api_key: str, log: logging.Logger):
+def run(cfg: dict, conn, sam_api_key: str, anthropic_api_key: str, voyage_api_key: str, log: logging.Logger):
     learned_weights = db.get_learned_weights(conn)
     today = datetime.now().date()
 
@@ -56,6 +56,19 @@ def run(cfg: dict, conn, sam_api_key: str, anthropic_api_key: str, log: logging.
                  "judgment this run, using keyword/NAICS scoring only")
     llm_model = llm_cfg.get("model", "claude-haiku-4-5")
     company_profile = cfg["company"]["capabilities_description"]
+
+    semantic_cfg = cfg.get("semantic_scoring", {})
+    semantic_enabled = bool(semantic_cfg.get("enabled")) and bool(voyage_api_key)
+    if semantic_cfg.get("enabled") and not voyage_api_key:
+        log.info("semantic_scoring.enabled is true but VOYAGE_API_KEY is not set — skipping semantic "
+                 "similarity this run, using keyword/NAICS/capability-code scoring only")
+    semantic_model = semantic_cfg.get("model", "voyage-3.5")
+    capability_embeddings = {}
+    if semantic_enabled:
+        capability_embeddings = semantic.embed_capabilities(cfg.get("capabilities", []), voyage_api_key, semantic_model)
+        if cfg.get("capabilities") and not capability_embeddings:
+            log.warning("semantic_scoring is enabled but capability embeddings failed — "
+                        "continuing without semantic similarity this run")
 
     for source_id, enabled in cfg["sources"].items():
         if not enabled or source_id not in SOURCE_FETCHERS:
@@ -72,17 +85,26 @@ def run(cfg: dict, conn, sam_api_key: str, anthropic_api_key: str, log: logging.
             db.log_run(conn, started, _now_iso(), source_id, "error", 0, repr(e))
             continue
 
+        in_scope_opps = [
+            opp for opp in opportunities
+            if source_id in NATIONWIDE_SOURCES or is_in_scope(opp.state, opp.lat, opp.lon, opp.city, cfg)
+        ]
+
+        opp_embeddings = {}
+        if semantic_enabled and capability_embeddings:
+            opp_embeddings = semantic.embed_opportunities_cached(in_scope_opps, conn, voyage_api_key, semantic_model)
+
         kept = 0
-        for opp in opportunities:
-            if source_id not in NATIONWIDE_SOURCES:
-                if not is_in_scope(opp.state, opp.lat, opp.lon, opp.city, cfg):
-                    continue
+        for opp in in_scope_opps:
             judgment = None
             if llm_enabled:
                 judgment = llm_scoring.judge_opportunity(opp, company_profile, anthropic_api_key, llm_model)
-            score, matched = scoring.score_opportunity(opp, cfg, learned_weights, today=today, llm_judgment=judgment)
-            reason = scoring.fit_reason(opp, matched, cfg, llm_judgment=judgment)
-            db.upsert_scored(conn, opp, score, matched, reason, _now_iso())
+            score, matched, matched_capability = scoring.score_opportunity(
+                opp, cfg, learned_weights, today=today, llm_judgment=judgment,
+                opp_embedding=opp_embeddings.get(opp.dedup_key), capability_embeddings=capability_embeddings,
+            )
+            reason = scoring.fit_reason(opp, matched, cfg, llm_judgment=judgment, matched_capability=matched_capability)
+            db.upsert_scored(conn, opp, score, matched, reason, _now_iso(), matched_capability=matched_capability)
             kept += 1
 
         log.info("Source %s: %d fetched, %d kept after geo filter", source_id, len(opportunities), kept)
@@ -101,6 +123,7 @@ def main():
     recipients = [addr.strip() for addr in (os.getenv("DIGEST_RECIPIENT") or gmail_address or "").split(",") if addr.strip()]
     sam_api_key = os.getenv("SAM_GOV_API_KEY", "")
     anthropic_api_key = os.getenv("ANTHROPIC_API_KEY", "")
+    voyage_api_key = os.getenv("VOYAGE_API_KEY", "")
 
     if not gmail_address or not gmail_app_password:
         log.error("GMAIL_ADDRESS / GMAIL_APP_PASSWORD not set in .env — cannot send digest. Aborting.")
@@ -110,7 +133,7 @@ def main():
         processed = feedback.scan_imap_feedback(conn, gmail_address, gmail_app_password)
         log.info("Processed %d feedback replies", processed)
 
-        run(cfg, conn, sam_api_key, anthropic_api_key, log)
+        run(cfg, conn, sam_api_key, anthropic_api_key, voyage_api_key, log)
 
         min_score = cfg["email"]["digest_min_score_to_include"]
         max_items = cfg["email"]["max_items_per_digest"]

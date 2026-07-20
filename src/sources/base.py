@@ -20,6 +20,14 @@ class Opportunity:
     description: str = ""
     naics_code: Optional[str] = None
     psc_code: Optional[str] = None
+    # NIGP commodity codes/category names, when the source exposes them
+    # (e.g. Houston Beacon Bid's `categories`). Not merged into naics_code/
+    # psc_code -- NIGP is a different classification system and conflating
+    # them would misrepresent a NIGP match as a NAICS/PSC match in scoring.
+    # Some sources only expose free-text category names, not numeric codes --
+    # this field holds whatever the source actually has, matched against
+    # capability profiles as free text either way.
+    nigp_codes: list = field(default_factory=list)
     value: Optional[float] = None
     set_aside: Optional[str] = None
     posted_date: Optional[date] = None

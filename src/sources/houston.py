@@ -20,7 +20,10 @@ record's response balloon to 600+ KB and none of it is used here.
 different classification system from our config's NAICS/PSC codes, so
 they aren't mapped to naics_code/psc_code -- doing so would misrepresent
 a NIGP code as a NAICS/PSC match in scoring. They're folded into the
-description text instead, so keyword matching still benefits from them.
+description text (so plain keyword matching still benefits from them)
+AND passed through as Opportunity.nigp_codes (free-text category names --
+Beacon Bid doesn't expose a numeric NIGP class code here, just names) so
+capability profiles can match against them as their own signal.
 
 status="open" is passed as a server-side filter, but -- same lesson as
 Oklahoma and TX ESBD -- a portal's own status labeling isn't fully
@@ -190,6 +193,7 @@ def _parse_record(rec: dict, today: date):
         response_deadline=due_date,
         state="TX",
         city="Houston",
+        nigp_codes=category_names,
         raw={"categories": category_names, "departments": departments},
     )
 

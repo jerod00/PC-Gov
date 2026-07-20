@@ -26,15 +26,16 @@ Every weekday morning, `run_daily.py`:
 ## Project layout
 
 ```
-config.yaml               # NAICS/PSC codes, keywords, scoring weights, source toggles — edit this, not the code
-.env / .env.example       # secrets: SAM.gov key, Gmail address/app password (never commit .env)
+config.yaml               # NAICS/PSC codes, keywords, capability profiles, scoring weights, source toggles — edit this, not the code
+.env / .env.example       # secrets: SAM.gov key, Gmail address/app password, Anthropic/Voyage keys (never commit .env)
 run_daily.py              # entry point the scheduler calls
 src/
   sources/                # one module per source (sam_gov.py, tx_esbd.py, san_antonio.py, austin.py, oklahoma.py, louisiana.py, houston.py, dallas_county.py, html_table.py, base.py)
-  db.py                   # SQLite: opportunities, feedback, learned_weights, run_log
+  db.py                   # SQLite: opportunities, feedback, learned_weights, embedding_cache, run_log
   geo.py                  # distance filtering for state/local sources
-  scoring.py              # config-driven ranking
+  scoring.py              # config-driven ranking (keywords, NAICS/PSC, capability profiles, semantic similarity)
   llm_scoring.py          # optional Claude-based relevance judgment layered on scoring.py
+  semantic.py             # optional Voyage AI embeddings for semantic similarity, layered on scoring.py
   email_digest.py         # HTML render + SMTP send
   feedback.py             # IMAP scan for feedback replies
   logging_setup.py
@@ -94,6 +95,15 @@ Edit `.env`:
   5. If your Workspace admin has disabled App Passwords org-wide, you'll need them to allow it for this account, or use an OAuth2 flow instead (not built here — ask if you hit this wall).
 - `DIGEST_RECIPIENT` — defaults to `GMAIL_ADDRESS` if left blank. Comma-separate multiple addresses to send the digest to more than one person (e.g. `jerod.mund@palconltd.com,amund@palconltd.com`). Feedback links always reply back to `GMAIL_ADDRESS`'s own inbox regardless of how many people are listed here — every recipient's thumbs-up/down still gets picked up by the next run's IMAP scan.
 - `ANTHROPIC_API_KEY` — **optional.** Powers the LLM relevance judgment (below) and the occasional source-discovery script. Leave blank to skip both; the daily digest works fine without it. To get one: go to [console.anthropic.com](https://console.anthropic.com) → sign in → **Settings → API Keys → Create Key**. Copy it in. At typical daily opportunity volume this runs well under $1/day on Claude Haiku — a rough estimate, not a quote, since your actual volume varies.
+- `VOYAGE_API_KEY` — **optional.** Powers semantic similarity scoring (below). Leave blank to skip it; the daily digest works fine without it. Get one at [dashboard.voyageai.com](https://dashboard.voyageai.com).
+
+### Capability profile & matching engine
+
+Rather than a single flat keyword/NAICS/PSC list, `config.yaml`'s `capabilities` section names each distinct thing Pal-Con actually manufactures/does (e.g. "Turbine ducts, filter housings & expansion joints," "Hydrovac / vacuum excavation services"), each with its own keywords and NAICS/PSC/NIGP codes. Every opportunity is checked against every capability, and the single best-fitting one contributes a `Capability: ...` line to the digest and a score component (`scoring.weights.capability_relevance` in `config.yaml`).
+
+This runs **alongside**, not instead of, the original flat `keywords`/`sam_gov.naics_codes`/`psc_codes` lists — an opportunity only needs to clear the relevance gate through *one* of: a flat keyword match, a flat NAICS/PSC match, a capability-profile match, or a positive LLM judgment.
+
+NAICS/PSC/NIGP codes are a **graduated signal, not a hard filter**: an exact code match earns full credit, but a code in the same family (same first `naics_prefix_length` NAICS digits, or `psc_prefix_length` PSC/FSC digits — see `scoring.capability_scoring` in `config.yaml`) still earns partial credit instead of nothing. NIGP is often just a free-text category name rather than a clean numeric code (see Houston below), so it's matched as substring text instead.
 
 ### LLM relevance judgment (optional)
 
@@ -105,6 +115,12 @@ With `ANTHROPIC_API_KEY` set and `llm_scoring.enabled: true` in `config.yaml` (o
 - If the API key is missing, or any individual call fails, that opportunity just falls back to keyword/NAICS-only scoring — this never blocks a run or the digest send.
 
 Edit `company.capabilities_description` in `config.yaml` any time to sharpen what Claude considers in-scope or out-of-scope (it explicitly lists things Palcon does *not* do, to stop "mentions steel in passing" false positives).
+
+### Semantic similarity scoring (optional)
+
+With `VOYAGE_API_KEY` set and `semantic_scoring.enabled: true` in `config.yaml` (off by default), each opportunity's text is compared via text embeddings against every capability's `description`, and the best similarity adds a bonus to that capability's score (`semantic_scoring.max_points`/`min_similarity`). This is a third independent signal alongside keyword/NAICS/capability-code matching and the LLM judgment above — it's what catches a genuine fit phrased in language that shares no keywords, codes, or NIGP terms with anything configured (e.g. "combustion exhaust conduit" scoring well against "Turbine ducts, filter housings & expansion joints" on meaning alone).
+
+Anthropic doesn't serve embeddings directly; this uses [Voyage AI](https://dashboard.voyageai.com) (the `voyageai` package, model configurable via `semantic_scoring.model`). Opportunity embeddings are cached in SQLite by listing + content hash so a recurring listing isn't re-embedded (and re-billed) every day it stays open; capability-description embeddings are always recomputed fresh so editing `config.yaml` takes effect immediately. If the key is missing or a call fails, that run just falls back to keyword/NAICS/capability-code scoring — this never blocks a run or the digest send.
 
 ## 4. First run (do this before scheduling anything)
 
@@ -148,13 +164,16 @@ Everything you'd want to adjust without touching code lives here:
 
 - **`sam_gov.naics_codes` / `psc_codes`** — add/remove codes as your product mix shifts.
 - **`keywords`** — four buckets (`high_value`, `medium_value`, `low_value`, `negative`), each with a `weight` and a `terms` list. Add phrases you see relevant postings using that the current list misses; add negative terms for false-positive patterns you keep seeing.
-- **`scoring.weights`** — how much each factor (keyword match, NAICS/PSC match, contract value, set-aside, proximity, deadline urgency) contributes to the final score.
+- **`capabilities`** — named capability profiles (own keywords + NAICS/PSC/NIGP codes + a description used for semantic similarity); see [Capability profile & matching engine](#capability-profile--matching-engine) above. Add a new entry any time Pal-Con adds a genuinely distinct capability.
+- **`scoring.weights`** — how much each factor (keyword match, NAICS/PSC match, capability match, contract value, set-aside, proximity, deadline urgency, LLM judgment) contributes to the final score.
+- **`scoring.capability_scoring`** — how a capability's own keyword/code matches turn into points, and the NAICS/PSC prefix lengths used for graduated (family-level) code credit.
 - **`scoring.qualifying_set_asides`** — only claim set-asides you actually qualify for.
 - **`scoring.contract_value_curve` / `proximity_curve` / `deadline_curve`** — shape how those factors score (see inline comments in the file).
 - **`sources`** — flip a source off entirely (e.g. if TX ESBD's scraper breaks and you want to silence the error emails until you fix it) without deleting code.
 - **`email.digest_min_score_to_include`** — raise this if you're getting too much noise; lower it if you're worried about missing marginal fits.
 - **`source_urls`** — where each scraper points; update here if a portal's URL changes.
 - **`company.capabilities_description`** / **`llm_scoring`** — see [LLM relevance judgment](#llm-relevance-judgment-optional) above.
+- **`semantic_scoring`** — see [Semantic similarity scoring](#semantic-similarity-scoring-optional) above.
 
 No restart or redeploy needed — `run_daily.py` reads `config.yaml` fresh every run.
 
@@ -162,10 +181,11 @@ No restart or redeploy needed — `run_daily.py` reads `config.yaml` fresh every
 
 Each opportunity in the digest has two links: 👍 **Good match** / 👎 **Not relevant**. Clicking either opens a pre-filled email reply — just hit send, don't edit the subject line. The next run scans your inbox via IMAP and records the feedback (run `python run_daily.py` again any time to pick it up immediately instead of waiting for the next scheduled run).
 
-Feedback improves the system across three dimensions, not just the exact opportunity you voted on — each bounded to a small nudge (±0.5 max, layered on top of — never overwriting — your `config.yaml` base config):
+Feedback improves the system across four dimensions, not just the exact opportunity you voted on — each bounded to a small nudge (±0.5 max, layered on top of — never overwriting — your `config.yaml` base config):
 - **Keyword weights** — the specific words that matched get nudged up or down.
 - **Source trust** — a source (e.g. San Antonio) that keeps getting thumbs-down gets its *whole* future output dampened, even on listings that don't share any keywords with what you voted on.
 - **NAICS code trust** — same idea, per NAICS code.
+- **Capability trust** — same idea, per capability profile (e.g. if "Hydrovac / vacuum excavation services" keeps getting thumbs-down, its future matches get dampened too).
 
 This is why a source or code with a consistently bad track record gradually surfaces less, even before you've explicitly voted on every individual listing from it. Query the current learned adjustments any time:
 ```powershell

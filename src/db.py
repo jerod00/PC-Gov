@@ -1,11 +1,13 @@
 """SQLite persistence: dedup history, rolling opportunity log, and feedback
 used to nudge keyword weights over time."""
 
+import hashlib
 import json
 import sqlite3
 from contextlib import contextmanager
 from datetime import date, datetime
 from pathlib import Path
+from typing import Optional
 
 from src.sources.base import Opportunity
 
@@ -20,6 +22,7 @@ CREATE TABLE IF NOT EXISTS opportunities (
     description       TEXT,
     naics_code        TEXT,
     psc_code          TEXT,
+    nigp_codes        TEXT,      -- JSON list of NIGP codes/category names, when the source has them
     value             REAL,
     set_aside         TEXT,
     posted_date       TEXT,
@@ -30,6 +33,7 @@ CREATE TABLE IF NOT EXISTS opportunities (
     lon               REAL,
     score             REAL,
     matched_keywords  TEXT,      -- JSON list, snapshot at scoring time
+    matched_capability TEXT,     -- name of the best-fit capability profile, if any (see scoring.py)
     reason            TEXT,      -- human-readable fit reason, for the digest
     first_seen_at     TEXT NOT NULL,
     emailed_at        TEXT       -- NULL until included in a digest
@@ -65,7 +69,35 @@ CREATE TABLE IF NOT EXISTS run_log (
     result_count INTEGER,
     detail      TEXT
 );
+
+-- Caches opportunity embeddings (src/semantic.py) keyed by dedup_key + a hash
+-- of the embedded text, so a recurring listing isn't re-embedded (and
+-- re-billed) every single day it stays open. Capability-description
+-- embeddings are NOT cached here -- there are only a handful of them, config
+-- edits should be picked up immediately, and re-embedding them each run is
+-- cheap.
+CREATE TABLE IF NOT EXISTS embedding_cache (
+    cache_key   TEXT PRIMARY KEY,   -- f"{dedup_key}:{sha256(text)}"
+    embedding   TEXT NOT NULL,      -- JSON list[float]
+    created_at  TEXT NOT NULL
+);
 """
+
+# Columns added to `opportunities` after the table's original release.
+# CREATE TABLE IF NOT EXISTS never alters an existing table, so an
+# already-deployed database (this project has been running in production
+# since before this migration) needs these added explicitly.
+_MIGRATIONS = [
+    ("opportunities", "nigp_codes", "TEXT"),
+    ("opportunities", "matched_capability", "TEXT"),
+]
+
+
+def _migrate_schema(conn: sqlite3.Connection):
+    for table, column, coltype in _MIGRATIONS:
+        existing = {row["name"] for row in conn.execute(f"PRAGMA table_info({table})")}
+        if column not in existing:
+            conn.execute(f"ALTER TABLE {table} ADD COLUMN {column} {coltype}")
 
 # Learned adjustments are nudged by this much per feedback event and clamped
 # to +/- this bound so no single keyword can dominate or zero out the base
@@ -87,6 +119,7 @@ def connect(db_path: str) -> sqlite3.Connection:
     conn = sqlite3.connect(db_path)
     conn.row_factory = sqlite3.Row
     conn.executescript(SCHEMA)
+    _migrate_schema(conn)
     return conn
 
 
@@ -105,26 +138,29 @@ def seen_keys(conn: sqlite3.Connection) -> set:
 
 
 def upsert_scored(conn: sqlite3.Connection, opp: Opportunity, score: float, matched_keywords: list,
-                   reason: str, now_iso: str):
+                   reason: str, now_iso: str, matched_capability: Optional[str] = None):
     """Insert a new opportunity (or refresh a seen one's score/detail without
     touching first_seen_at / emailed_at)."""
     conn.execute(
         """
         INSERT INTO opportunities (
             dedup_key, source_id, notice_id, title, agency, url, description,
-            naics_code, psc_code, value, set_aside, posted_date, response_deadline,
-            city, state, lat, lon, score, matched_keywords, reason, first_seen_at, emailed_at
-        ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, NULL)
+            naics_code, psc_code, nigp_codes, value, set_aside, posted_date, response_deadline,
+            city, state, lat, lon, score, matched_keywords, matched_capability, reason,
+            first_seen_at, emailed_at
+        ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, NULL)
         ON CONFLICT(dedup_key) DO UPDATE SET
             score = excluded.score,
             matched_keywords = excluded.matched_keywords,
+            matched_capability = excluded.matched_capability,
             reason = excluded.reason
         """,
         (
             opp.dedup_key, opp.source_id, opp.notice_id, opp.title, opp.agency, opp.url,
-            opp.description, opp.naics_code, opp.psc_code, opp.value, opp.set_aside,
-            _iso(opp.posted_date), _iso(opp.response_deadline), opp.city, opp.state,
-            opp.lat, opp.lon, score, json.dumps(matched_keywords), reason, now_iso,
+            opp.description, opp.naics_code, opp.psc_code, json.dumps(opp.nigp_codes or []),
+            opp.value, opp.set_aside, _iso(opp.posted_date), _iso(opp.response_deadline),
+            opp.city, opp.state, opp.lat, opp.lon, score, json.dumps(matched_keywords),
+            matched_capability, reason, now_iso,
         ),
     )
 
@@ -167,7 +203,8 @@ def record_feedback(conn: sqlite3.Connection, dedup_key: str, verdict: str, now_
         (dedup_key, verdict, now_iso),
     )
     row = conn.execute(
-        "SELECT matched_keywords, source_id, naics_code FROM opportunities WHERE dedup_key = ?", (dedup_key,)
+        "SELECT matched_keywords, source_id, naics_code, matched_capability FROM opportunities WHERE dedup_key = ?",
+        (dedup_key,),
     ).fetchone()
     if row is None:
         return
@@ -178,6 +215,8 @@ def record_feedback(conn: sqlite3.Connection, dedup_key: str, verdict: str, now_
         nudge_weight(conn, "source", row["source_id"], delta)
     if row["naics_code"]:
         nudge_weight(conn, "naics", row["naics_code"], delta)
+    if row["matched_capability"]:
+        nudge_weight(conn, "capability", row["matched_capability"], delta)
 
 
 def nudge_weight(conn: sqlite3.Connection, kind: str, key: str, delta: float):
@@ -192,14 +231,40 @@ def nudge_weight(conn: sqlite3.Connection, kind: str, key: str, delta: float):
 
 
 def get_learned_weights(conn: sqlite3.Connection) -> dict:
-    """Returns {'keyword': {...}, 'source': {...}, 'naics': {...}}, each
-    mapping key -> adjustment. Missing keys default to 0 (no adjustment)
-    wherever scoring.py looks them up."""
-    result = {"keyword": {}, "source": {}, "naics": {}}
+    """Returns {'keyword': {...}, 'source': {...}, 'naics': {...},
+    'capability': {...}}, each mapping key -> adjustment. Missing keys
+    default to 0 (no adjustment) wherever scoring.py looks them up."""
+    result = {"keyword": {}, "source": {}, "naics": {}, "capability": {}}
     for row in conn.execute("SELECT kind, key, adjustment FROM learned_adjustments"):
         if row["kind"] in result:
             result[row["kind"]][row["key"]] = row["adjustment"]
     return result
+
+
+def _embedding_cache_key(dedup_key: str, text: str) -> str:
+    return f"{dedup_key}:{hashlib.sha256(text.encode('utf-8')).hexdigest()}"
+
+
+def get_cached_embedding(conn: sqlite3.Connection, dedup_key: str, text: str) -> Optional[list]:
+    """Returns the cached embedding vector for this exact (dedup_key, text)
+    pair, or None if not cached (a miss also happens whenever the listing's
+    title/description text changes, which is correct -- a changed listing
+    needs a fresh embedding)."""
+    row = conn.execute(
+        "SELECT embedding FROM embedding_cache WHERE cache_key = ?",
+        (_embedding_cache_key(dedup_key, text),),
+    ).fetchone()
+    return json.loads(row["embedding"]) if row else None
+
+
+def set_cached_embedding(conn: sqlite3.Connection, dedup_key: str, text: str, embedding: list, now_iso: str):
+    conn.execute(
+        """
+        INSERT INTO embedding_cache (cache_key, embedding, created_at) VALUES (?, ?, ?)
+        ON CONFLICT(cache_key) DO UPDATE SET embedding = excluded.embedding
+        """,
+        (_embedding_cache_key(dedup_key, text), json.dumps(embedding), now_iso),
+    )
 
 
 def log_run(conn: sqlite3.Connection, started_at: str, finished_at: str, source_id: str,
