@@ -25,16 +25,27 @@ def _find_matches(text: str, terms: list) -> list:
 
 
 def _keyword_score(opp: Opportunity, keywords_cfg: dict, learned_keyword_weights: dict):
+    """Returns (total_score, positive_matched). Negative-weighted categories
+    (e.g. `negative`) still fully apply their penalty to total_score, but
+    their terms are deliberately excluded from positive_matched -- a term
+    that only matched because it's a *penalty* signal is not evidence of
+    relevance, and must never satisfy the relevance gate in
+    score_opportunity() or show up as a "Matches: ..." reason in the
+    digest. (Found live: "DR15 6A Edgewood Park Detention Basin" scored 25
+    and displayed "Matches: landscaping" -- landscaping is a negative term,
+    penalizing the score, not the reason it passed the gate.)"""
     text = f"{opp.title}\n{opp.description}"
     total = 0.0
-    matched = []
+    positive_matched = []
     for _category, spec in keywords_cfg.items():
         base_weight = spec.get("weight", 0)
+        is_negative = base_weight < 0
         for term in _find_matches(text, spec.get("terms", [])):
             adjustment = learned_keyword_weights.get(term, 0.0)
             total += base_weight * (1 + adjustment)
-            matched.append(term)
-    return total, matched
+            if not is_negative:
+                positive_matched.append(term)
+    return total, positive_matched
 
 
 def _value_score(value: Optional[float], curve_cfg: dict) -> float:
