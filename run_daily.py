@@ -95,7 +95,8 @@ def run(cfg: dict, conn, sam_api_key: str, anthropic_api_key: str, voyage_api_ke
 
         in_scope_opps = [
             opp for opp in opportunities
-            if source_id in NATIONWIDE_SOURCES or is_in_scope(opp.state, opp.lat, opp.lon, opp.city, cfg)
+            if (source_id in NATIONWIDE_SOURCES or is_in_scope(opp.state, opp.lat, opp.lon, opp.city, cfg))
+            and scoring.meets_minimum_value(opp, cfg)
         ]
 
         opp_embeddings = {}
@@ -106,7 +107,10 @@ def run(cfg: dict, conn, sam_api_key: str, anthropic_api_key: str, voyage_api_ke
         for opp in in_scope_opps:
             judgment = None
             if llm_enabled:
-                judgment = llm_scoring.judge_opportunity(opp, company_profile, anthropic_api_key, llm_model)
+                judgment = llm_scoring.judge_opportunity(
+                    opp, company_profile, anthropic_api_key, llm_model,
+                    minimum_value=cfg["scoring"].get("minimum_contract_value"),
+                )
             score, matched, matched_capability = scoring.score_opportunity(
                 opp, cfg, learned_weights, today=today, llm_judgment=judgment,
                 opp_embedding=opp_embeddings.get(opp.dedup_key), capability_embeddings=capability_embeddings,
@@ -115,7 +119,7 @@ def run(cfg: dict, conn, sam_api_key: str, anthropic_api_key: str, voyage_api_ke
             db.upsert_scored(conn, opp, score, matched, reason, _now_iso(), matched_capability=matched_capability)
             kept += 1
 
-        log.info("Source %s: %d fetched, %d kept after geo filter", source_id, len(opportunities), kept)
+        log.info("Source %s: %d fetched, %d kept after geo/value filters", source_id, len(opportunities), kept)
         db.log_run(conn, started, _now_iso(), source_id, "ok", kept, f"{len(opportunities)} fetched")
 
 

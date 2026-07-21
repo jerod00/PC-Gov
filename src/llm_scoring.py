@@ -60,20 +60,35 @@ class LLMJudgment:
     reasoning: str
 
 
-def _build_prompt(opp: Opportunity, company_profile: str) -> str:
+def _build_prompt(opp: Opportunity, company_profile: str, minimum_value: Optional[float] = None) -> str:
+    size_note = ""
+    if minimum_value:
+        size_note = (
+            f"\nThe company only pursues substantial projects — roughly "
+            f"${minimum_value:,.0f} or more in contract value. Most listings here don't state "
+            f"a dollar figure at all (many sources don't report one, and federal notices "
+            f"usually only get a value after award), so judge likely scope from the work "
+            f"itself: a single part, a spare/replacement component, or a small commodity "
+            f"purchase is almost never that size even if it superficially fits the company's "
+            f"trade (e.g. a single vehicle part is not a $500K+ fabrication project). Judge "
+            f"those NOT relevant regardless of category fit.\n"
+        )
     return (
         f"Company profile:\n{company_profile}\n\n"
         "Government contract opportunity:\n"
         f"Title: {opp.title}\n"
         f"Agency: {opp.agency}\n"
         f"Description: {opp.description or '(no description available)'}\n"
-        f"NAICS code: {opp.naics_code or 'unknown'}\n\n"
+        f"NAICS code: {opp.naics_code or 'unknown'}\n"
+        f"{size_note}\n"
         "Judge whether this opportunity is something the company described above could "
         "plausibly bid on and win, given its actual capabilities. Be specific and skeptical."
     )
 
 
-def judge_opportunity(opp: Opportunity, company_profile: str, api_key: str, model: str) -> Optional[LLMJudgment]:
+def judge_opportunity(
+    opp: Opportunity, company_profile: str, api_key: str, model: str, minimum_value: Optional[float] = None,
+) -> Optional[LLMJudgment]:
     """Returns None on any failure. LLM judgment is a nice-to-have enhancement
     layered on deterministic scoring, never something that should block a
     run or crash it."""
@@ -84,7 +99,7 @@ def judge_opportunity(opp: Opportunity, company_profile: str, api_key: str, mode
             max_tokens=MAX_TOKENS,
             tools=[JUDGE_TOOL],
             tool_choice={"type": "tool", "name": "judge_relevance"},
-            messages=[{"role": "user", "content": _build_prompt(opp, company_profile)}],
+            messages=[{"role": "user", "content": _build_prompt(opp, company_profile, minimum_value)}],
         )
         for block in response.content:
             if block.type == "tool_use" and block.name == "judge_relevance":

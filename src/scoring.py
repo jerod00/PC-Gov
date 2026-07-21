@@ -180,6 +180,23 @@ def _value_score(value: Optional[float], curve_cfg: dict) -> float:
     return frac * curve_cfg["max_points"]
 
 
+def meets_minimum_value(opp: Opportunity, cfg: dict) -> bool:
+    """Hard floor on contract size, applied before scoring ever runs.
+
+    Only SAM.gov currently reports a structured dollar value -- every other
+    source (Texas/Bonfire/CivicEngage/etc.) leaves `value` unset because
+    their listing pages don't expose one. This only drops an opportunity
+    when its value is actually KNOWN to be below the floor; unknown-value
+    listings pass through unaffected, since there's no size data to judge
+    them by and dropping them would silently gut most of the state/local
+    coverage this project has.
+    """
+    minimum = cfg["scoring"].get("minimum_contract_value")
+    if not minimum or opp.value is None:
+        return True
+    return opp.value >= minimum
+
+
 def _proximity_score(opp: Opportunity, cfg: dict) -> float:
     curve = cfg["scoring"]["proximity_curve"]
     if opp.source_id == "sam_gov":

@@ -311,10 +311,24 @@ scoring:
     llm_relevance: 15        # bonus (scaled by the LLM's confidence 0-100%) when llm_scoring judges it relevant — see llm_scoring below
     capability_relevance: 1.0  # multiplier on the best-fitting capability's raw score — see capabilities above and capability_scoring below
 
-  # Contract value scoring: log-scaled so a $50k job and a $50M job don't
+  # Hard floor on contract size (2026-07-21, per company direction) --
+  # opportunities with a KNOWN value below this are dropped entirely,
+  # before scoring ever sees them (see scoring.meets_minimum_value in
+  # src/scoring.py, applied in run_daily.py alongside the geo filter).
+  # This only applies when a source actually reports a value -- today
+  # that's just SAM.gov; every other source (Texas/Bonfire/CivicEngage/
+  # etc.) leaves value unset, and those opportunities pass through
+  # unaffected since there's no size data to judge them by. Set to 0 or
+  # remove to disable.
+  minimum_contract_value: 500000
+
+  # Contract value scoring: log-scaled so a $500k job and a $50M job don't
   # collapse to the same bucket. Values outside this range are clamped.
+  # min_value matches minimum_contract_value above -- since anything below
+  # that floor is already dropped, the scoring curve is calibrated to the
+  # range of opportunities that can actually survive the gate.
   contract_value_curve:
-    min_value: 10000
+    min_value: 500000
     max_value: 50000000
     max_points: 25
 
