@@ -1,7 +1,9 @@
 """Renders and sends the ranked HTML digest via SMTP (Gmail/Google
 Workspace). Each opportunity gets two mailto: feedback links whose subject
 line encodes the dedup_key + verdict — feedback.py's IMAP scanner picks
-these up on the next run.
+these up on the next run — plus a blank-recipient "Share" mailto: link
+prefilled with the job's details, for forwarding to a subcontractor,
+estimator, or anyone else outside this project's own recipient list.
 """
 
 import smtplib
@@ -29,9 +31,32 @@ def _format_deadline(deadline_str):
     return deadline_str or "Not listed"
 
 
+def _share_link(row: dict) -> str:
+    """Blank-recipient mailto: so whoever's forwarding it just types in who
+    it's going to -- prefilled with everything about the job so nobody has
+    to hand-copy details out of the digest."""
+    subject = quote(f"Opportunity: {row['title']}")
+    location = ", ".join(part for part in (row.get("city"), row.get("state")) if part)
+    body_lines = [
+        row["title"],
+        f"Agency: {row.get('agency') or 'Not listed'}",
+        f"Location: {location or 'Not listed'}",
+        f"NAICS: {row.get('naics_code') or '—'}    PSC: {row.get('psc_code') or '—'}",
+        f"Estimated value: {_format_value(row.get('value'))}",
+        f"Response deadline: {_format_deadline(row.get('response_deadline'))}",
+        "",
+        f"Details / submit: {row['url']}",
+        "",
+        (row.get("reason") or "").strip(),
+    ]
+    body = quote("\n".join(line for line in body_lines if line is not None))
+    return f"mailto:?subject={subject}&body={body}"
+
+
 def _row_html(row: dict, feedback_address: str) -> str:
     good_link = _feedback_link(feedback_address, row["dedup_key"], "good")
     bad_link = _feedback_link(feedback_address, row["dedup_key"], "bad")
+    share_link = _share_link(row)
     return f"""
     <tr style="border-bottom:1px solid #ddd;">
       <td style="padding:12px;">
@@ -48,7 +73,8 @@ def _row_html(row: dict, feedback_address: str) -> str:
         <div style="font-size:13px;color:#2a6b2a;margin-top:6px;">{escape(row.get('reason') or '')}</div>
         <div style="font-size:12px;margin-top:8px;">
           <a href="{good_link}" style="color:#1a7a1a;margin-right:14px;">&#128077; Good match</a>
-          <a href="{bad_link}" style="color:#a02020;">&#128078; Not relevant</a>
+          <a href="{bad_link}" style="color:#a02020;margin-right:14px;">&#128078; Not relevant</a>
+          <a href="{share_link}" style="color:#1a4d8f;">&#128228; Share</a>
         </div>
       </td>
       <td style="padding:12px;text-align:right;vertical-align:top;font-size:18px;font-weight:700;color:#1a4d8f;">
