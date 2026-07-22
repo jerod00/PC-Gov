@@ -391,6 +391,35 @@ sources:
   port_of_galveston_bonfire: true
   galveston: true
   # Phase 2 — not yet built:
+  # Missouri (MissouriBUYS): the platform changed since this project last
+  # looked at it. As of 2026-07-21, investigated live: solicitations issued
+  # on/after 2024-09-18 moved to a new system, "MissouriBUYS, powered by
+  # MOVERS" -- an Oracle Fusion Cloud (Government Cloud/FedRAMP) Negotiation
+  # Abstracts app hosted on a totally separate host (a *.oraclecloud.com /
+  # *.oraclegovcloud.com domain, not missouribuys.mo.gov itself). Confirmed
+  # real: missouribuys.mo.gov's robots.txt (Drupal) doesn't block the bid
+  # board pages, and the Oracle host itself returns a bare 404 on
+  # /robots.txt (no restriction declared) -- and the page genuinely renders
+  # a real, current, publicly-viewable list of open solicitations (IFB/RFP/
+  # RFQ, close dates, some plausibly fabrication/equipment-adjacent: MoDOT
+  # vehicle/equipment work, correctional facility maintenance, etc.) without
+  # requiring login to view.
+  # NOT built anyway: the list is rendered client-side by a heavy Oracle
+  # Redwood UI SPA, and reverse-engineering its REST API (same approach that
+  # worked for Houston's Beacon Bid) went several layers deep -- a telemetry/
+  # tracing beacon, a metadata-only listing resource, and two different
+  # per-item "child" sub-resources (attachments, amendments) -- without
+  # reaching the actual base list endpoint. This also surfaced a real open
+  # question a Houston-style approach didn't have: an OAuth/IDCS redirect
+  # appeared in one request, meaning some part of this app may depend on an
+  # authenticated session that a stateless script couldn't replicate, not
+  # just an anonymous "guest" cookie. Revisit with either a dedicated
+  # reverse-engineering session (direct DevTools access, not relayed
+  # screenshots) or a headless-browser (Playwright) approach -- a materially
+  # bigger lift than any other source in this project, so not pursued
+  # further for now. The old pre-2024-09-18 system (WebProcure by Proactis,
+  # missouribuys.mo.gov/bid-board/webprocure) is fading out and wasn't
+  # investigated, since it can't carry current solicitations going forward.
   missouri: false
   # Not automated — brittle/login-walled/mid-migration/no actionable open-
   # opportunity feed/robots.txt disallows it. See README for the portal's own

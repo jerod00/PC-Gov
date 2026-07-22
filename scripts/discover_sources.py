@@ -71,8 +71,10 @@ ALREADY_KNOWN = [
     "Public Purchase (real bids sit behind a client-side drill-down, not a browsable page)",
     "DemandStar (open bids require a $550/yr paid subscription for Texas)",
     "BidPrime, GovWin IQ, Periscope S2G (paid enterprise SLED subscriptions)",
-    "Louisiana LaPAC (osp/lapac on doa.louisiana.gov — in progress, not yet built)",
-    "Missouri MissouriBUYS (not yet built)",
+    "Louisiana LaPAC (osp/lapac on doa.louisiana.gov, source built)",
+    "Missouri MissouriBUYS, powered by MOVERS (Oracle Fusion Government Cloud Negotiation "
+    "Abstracts app -- robots.txt open, real public data confirmed live 2026-07, but it's a "
+    "JS-heavy SPA whose REST API wasn't fully reverse-engineered; not built)",
 ]
 
 REPORT_TOOL = {
