@@ -100,12 +100,16 @@ def fetch(cfg: dict, source_id: str, agency: str, city: str, state: str) -> list
 
     rows = soup.find_all("div", class_=lambda c: c and "listItemsRow" in c.split())
     opportunities = []
+    seen_notice_ids = set()
     for row in rows:
         opp = _parse_row(row, page_url, source_id, agency, city, state)
         if opp is None:
             continue
         if opp.response_deadline is not None and opp.response_deadline < today:
             continue  # belt-and-suspenders: skip stale deadlines even if marked "Open"
+        if opp.notice_id in seen_notice_ids:
+            continue  # some orgs (e.g. Midland) cross-list the same bid under multiple department headers
+        seen_notice_ids.add(opp.notice_id)
         opportunities.append(opp)
 
     log.info("%s CivicEngage returned %d open opportunities", agency, len(opportunities))

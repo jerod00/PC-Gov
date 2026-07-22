@@ -390,6 +390,8 @@ sources:
   amarillo_bonfire: true
   port_of_galveston_bonfire: true
   galveston: true
+  odessa: true
+  midland: true
   # Phase 2 — not yet built:
   # Missouri (MissouriBUYS): the platform changed since this project last
   # looked at it. As of 2026-07-21, investigated live: solicitations issued
@@ -482,12 +484,22 @@ sources:
   # not just the rendered text) is byte-for-byte structurally identical to
   # the already-working Wichita Falls scraper, so it reuses that same
   # shared module (civicengage_bids.py, generalized from wichita_falls.py
-  # in this round) rather than a fresh guess. Odessa and Midland run the
-  # same CivicEngage platform and share an identical robots.txt with
-  # Galveston, but their own `Bids.aspx` markup was never independently
-  # fetched and inspected -- per this project's standing rule, they stay
-  # unbuilt until someone actually pulls their real page source, even
-  # though the platform itself is now proven elsewhere.
+  # in this round) rather than a fresh guess.
+  # Odessa and Midland, re-checked live 2026-07-22: same permissive
+  # robots.txt template, and both render the same confirmed structure
+  # ("Bid No." pattern, "Status:"/"Closes:" labels) across repeated
+  # full-page fetches -- though unlike Galveston, byte-level view-source
+  # wasn't independently pulled for either, so confidence here rests on
+  # structural consistency plus the platform being proven twice elsewhere,
+  # not a literal markup confirmation. Odessa: only the "Request for
+  # Proposal" category was confirmed (a separate "Invitation to Bid"
+  # category may exist and not be covered). Midland: descriptions are
+  # generic boilerplate pointing to Bonfire/email rather than real
+  # solicitation text (the city migrated actual solicitation management to
+  # Bonfire, which remains blocked -- see below -- but this CivicEngage
+  # board still lists a real open-bid index), and the same bid can be
+  # cross-listed under multiple department headings, handled by a
+  # dedup-by-bid-number step in civicengage_bids.py.
   arkansas_egp: false
   # Tarrant County (Fort Worth's county) uses Ion Wave, a different
   # eProcurement vendor than Bonfire -- but Ion Wave, Bonfire, EqualLevel,
@@ -537,6 +549,8 @@ source_urls:
   amarillo_bonfire: "https://amarillo.bonfirehub.com/opportunities/rss"
   port_of_galveston_bonfire: "https://portofgalveston.bonfirehub.com/opportunities/rss"
   galveston: "https://www.galvestontx.gov/Bids.aspx?CatID=showStatus&txtSort=Category&showAllBids=on&Status=open"
+  odessa: "https://www.odessa-tx.gov/Bids.aspx?showAllBids=on"
+  midland: "https://www.midlandtexas.gov/Bids.aspx"
 
 email:
   digest_min_score_to_include: 25   # opportunities scoring below this are dropped entirely

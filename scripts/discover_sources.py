@@ -59,9 +59,11 @@ ALREADY_KNOWN = [
     "Amarillo, TX Bonfire portal (public Opportunity RSS feed, source built)",
     "Port of Galveston, TX Bonfire portal (public Opportunity RSS feed, source built)",
     "Galveston, TX CivicEngage Bids.aspx (source built)",
-    "Midland, TX Bonfire portal (robots.txt disallows crawling, checked 2026-07)",
+    "Midland, TX Bonfire portal (robots.txt disallows crawling, checked 2026-07 -- separate "
+    "from Midland's own CivicEngage Bids.aspx board, which is built, see below)",
     "Galveston County, TX Bonfire portal (robots.txt disallows crawling, checked 2026-07)",
-    "Odessa, TX / Midland, TX CivicEngage Bids.aspx (robots.txt open, but real page markup not yet independently fetched/inspected -- not built)",
+    "Odessa, TX CivicEngage Bids.aspx (source built)",
+    "Midland, TX CivicEngage Bids.aspx (source built)",
     "Tarrant County, TX Ion Wave portal (robots.txt disallows crawling, checked 2026-07)",
     "Houston, TX Beacon Bid / SAP Ariba (login-gated)",
     "Arkansas state purchasing (mid-migration to SAP Ariba as of mid-2026)",
