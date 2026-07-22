@@ -36,7 +36,14 @@ company:
     - NM
     - KS
     - MO
-  radius_miles: 500
+  # Widened from 500 to 525 on 2026-07-22, per company direction, specifically
+  # to bring New Orleans, LA into scope (505.9 miles from Stephenville via
+  # this project's own haversine calculation -- previously just outside the
+  # old radius). This also modestly widens eligibility for any other
+  # borderline OK/AR/NM/KS/MO location that happened to sit between 500 and
+  # 525 miles; that's an accepted side effect of a single shared radius, not
+  # something carved out per-state.
+  radius_miles: 525
 
 # -----------------------------------------------------------------------------
 # Capability profile — what Pal-Con can actually manufacture/do, as a set of
@@ -360,7 +367,7 @@ scoring:
   proximity_curve:
     max_points: 15
     full_points_within_miles: 100   # anything closer than this gets max points
-    radius_miles: 500               # points taper to 0 at the radius edge
+    radius_miles: 525               # points taper to 0 at the radius edge -- kept in sync with company.radius_miles above
 
   # Deadline urgency: more points as the response deadline approaches, up to
   # a point — too close to respond meaningfully gets slightly discounted.

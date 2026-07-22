@@ -44,6 +44,12 @@ CITY_CENTROIDS = {
     ("Bossier City", "LA"): (32.5160, -93.7321),
     ("Monroe", "LA"): (32.5093, -92.1193),
     ("Alexandria", "LA"): (31.3113, -92.4451),
+    # New Orleans is real coords, not the LA state centroid, on purpose:
+    # the state centroid alone resolves to ~377mi from Stephenville, TX,
+    # while New Orleans' actual coordinates are ~506mi -- close enough to
+    # the radius edge that using the wrong fallback would have silently
+    # misjudged it as in-scope.
+    ("New Orleans", "LA"): (29.9511, -90.0715),
     ("Little Rock", "AR"): (34.7465, -92.2896),
     ("Fort Smith", "AR"): (35.3859, -94.3985),
     ("Texarkana", "AR"): (33.4418, -94.0377),
