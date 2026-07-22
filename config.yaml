@@ -399,6 +399,17 @@ sources:
   galveston: true
   odessa: true
   midland: true
+  # New Orleans, LA: confirmed live 2026-07-22. nola.gov/robots.txt's
+  # wildcard rule only disallows /admin (the more restrictive rules
+  # further down are scoped to named bots like Googlebot, not the
+  # wildcard group), and the real page source confirms a plain
+  # server-rendered listing (Kentico CMS) -- see src/sources/
+  # new_orleans.py for the full story, including a real lxml-vs-
+  # html.parser bug caught while building this (lxml corrupts this
+  # page's nested-<li> structure). New Orleans is 505.9mi from
+  # Stephenville, TX -- see the radius widening (525mi) and the explicit
+  # geo.py CITY_CENTROIDS entry added specifically for this source.
+  new_orleans: true
   # Phase 2 — not yet built:
   # Missouri (MissouriBUYS): the platform changed since this project last
   # looked at it. As of 2026-07-21, investigated live: solicitations issued
@@ -558,6 +569,7 @@ source_urls:
   galveston: "https://www.galvestontx.gov/Bids.aspx?CatID=showStatus&txtSort=Category&showAllBids=on&Status=open"
   odessa: "https://www.odessa-tx.gov/Bids.aspx?showAllBids=on"
   midland: "https://www.midlandtexas.gov/Bids.aspx"
+  new_orleans: "https://nola.gov/view-bid-opportunities/"
 
 email:
   digest_min_score_to_include: 25   # opportunities scoring below this are dropped entirely

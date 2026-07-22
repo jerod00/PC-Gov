@@ -20,7 +20,7 @@ load_dotenv()
 from src import db, email_digest, feedback, llm_scoring, logging_setup, scoring, semantic  # noqa: E402
 from src.geo import is_in_scope  # noqa: E402
 from src.sources.base import SourceError  # noqa: E402
-from src.sources import sam_gov, tx_esbd, san_antonio, austin, oklahoma, louisiana, houston, dallas_county, wichita_falls, dallas_bonfire, fort_worth_bonfire, harris_county_bonfire, san_angelo_bonfire, waco_bonfire, amarillo_bonfire, port_of_galveston_bonfire, galveston, odessa, midland  # noqa: E402
+from src.sources import sam_gov, tx_esbd, san_antonio, austin, oklahoma, louisiana, houston, dallas_county, wichita_falls, dallas_bonfire, fort_worth_bonfire, harris_county_bonfire, san_angelo_bonfire, waco_bonfire, amarillo_bonfire, port_of_galveston_bonfire, galveston, odessa, midland, new_orleans  # noqa: E402
 
 SOURCE_FETCHERS = {
     "sam_gov": lambda cfg, api_key: sam_gov.fetch(cfg, api_key),
@@ -42,6 +42,7 @@ SOURCE_FETCHERS = {
     "galveston": lambda cfg, api_key: galveston.fetch(cfg),
     "odessa": lambda cfg, api_key: odessa.fetch(cfg),
     "midland": lambda cfg, api_key: midland.fetch(cfg),
+    "new_orleans": lambda cfg, api_key: new_orleans.fetch(cfg),
 }
 NATIONWIDE_SOURCES = {"sam_gov"}  # skip the state/local geo gate entirely
 

@@ -64,6 +64,8 @@ ALREADY_KNOWN = [
     "Galveston County, TX Bonfire portal (robots.txt disallows crawling, checked 2026-07)",
     "Odessa, TX CivicEngage Bids.aspx (source built)",
     "Midland, TX CivicEngage Bids.aspx (source built)",
+    "New Orleans, LA nola.gov View bid opportunities (source built; note: main City of "
+    "New Orleans procurement channel is BidNet Direct, which is separately rejected above)",
     "Tarrant County, TX Ion Wave portal (robots.txt disallows crawling, checked 2026-07)",
     "Houston, TX Beacon Bid / SAP Ariba (login-gated)",
     "Arkansas state purchasing (mid-migration to SAP Ariba as of mid-2026)",
