@@ -136,6 +136,8 @@ With `ANTHROPIC_API_KEY` set and `llm_scoring.enabled: true` in `config.yaml` (o
 
 Edit `company.capabilities_description` in `config.yaml` any time to sharpen what Claude considers in-scope or out-of-scope (it explicitly lists things Palcon does *not* do, to stop "mentions steel in passing" false positives).
 
+**Judgments are cached** (2026-07-23), same idea as the embedding cache below: keyed in SQLite on `dedup_key` + a hash of the judged text (title/agency/description/NAICS/minimum_value), so a recurring listing that hasn't changed since yesterday reuses its cached judgment instead of hitting the API again. Before this existed, every in-scope opportunity was re-judged by Claude on every single run regardless of whether it had already been judged — with 20+ sources and several hundred recurring listings, that was the dominant cost of both runtime (a run could take 10-15 minutes) and API spend. A changed title/description/NAICS naturally busts the cache for just that listing, since it changes the hash.
+
 ### Semantic similarity scoring (optional)
 
 With `VOYAGE_API_KEY` set and `semantic_scoring.enabled: true` in `config.yaml` (off by default), each opportunity's text is compared via text embeddings against every capability's `description`, and the best similarity adds a bonus to that capability's score (`semantic_scoring.max_points`/`min_similarity`). This is a third independent signal alongside keyword/NAICS/capability-code matching and the LLM judgment above — it's what catches a genuine fit phrased in language that shares no keywords, codes, or NIGP terms with anything configured (e.g. "combustion exhaust conduit" scoring well against "Turbine ducts, filter housings & expansion joints" on meaning alone).

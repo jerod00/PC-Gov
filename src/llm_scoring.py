@@ -10,10 +10,20 @@ opportunity per day (bulk classification), not a task that needs deep
 reasoning. Forces a structured tool call (`strict: true`) so the result is
 always a validated {relevant, confidence, reasoning} shape, never free-form
 text to parse.
+
+Judgments are cached in SQLite (src/db.py, same pattern as semantic.py's
+embedding cache) keyed on dedup_key + a hash of the judged text, since a
+recurring listing would otherwise be re-judged by Claude every single day it
+stays open -- previously the dominant cost of both runtime and API spend,
+since the same few hundred listings recur unchanged day after day.
+judge_opportunities_cached() is the entry point run_daily.py should use;
+judge_opportunity() (uncached, single-opportunity) is kept for that batch
+function to call on a cache miss.
 """
 
 import logging
 from dataclasses import dataclass
+from datetime import datetime, timezone
 from typing import Optional
 
 import anthropic
@@ -23,6 +33,21 @@ from src.sources.base import Opportunity
 log = logging.getLogger(__name__)
 
 MAX_TOKENS = 500
+
+_client = None
+_client_key = None
+
+
+def _get_client(api_key: str):
+    global _client, _client_key
+    if _client is None or _client_key != api_key:
+        _client = anthropic.Anthropic(api_key=api_key)
+        _client_key = api_key
+    return _client
+
+
+def _now_iso():
+    return datetime.now(timezone.utc).isoformat()
 
 JUDGE_TOOL = {
     "name": "judge_relevance",
@@ -93,7 +118,7 @@ def judge_opportunity(
     layered on deterministic scoring, never something that should block a
     run or crash it."""
     try:
-        client = anthropic.Anthropic(api_key=api_key)
+        client = _get_client(api_key)
         response = client.messages.create(
             model=model,
             max_tokens=MAX_TOKENS,
@@ -112,3 +137,38 @@ def judge_opportunity(
     except Exception as e:  # noqa: BLE001 — never let LLM scoring break a run
         log.warning("LLM judgment failed for %s: %s", opp.dedup_key, e)
     return None
+
+
+def _cache_text(opp: Opportunity, minimum_value: Optional[float]) -> str:
+    """Everything that actually varies _build_prompt's output for a given
+    company_profile, so a change to any of these (a new addendum's
+    description, a corrected NAICS code, a changed minimum_value in
+    config.yaml) naturally busts the cache instead of serving a stale
+    judgment."""
+    return f"{opp.title}\n{opp.agency}\n{opp.description}\n{opp.naics_code}\n{minimum_value}"
+
+
+def judge_opportunities_cached(
+    opportunities: list, company_profile: str, conn, api_key: str, model: str,
+    minimum_value: Optional[float] = None,
+) -> dict:
+    """Returns {dedup_key: LLMJudgment} for every opportunity that has a
+    cached judgment already or was successfully judged this call. Only
+    genuinely new or changed listings hit the Anthropic API — see module
+    docstring."""
+    from src import db  # local import — avoids a hard circular-import edge at module load
+
+    result = {}
+    for opp in opportunities:
+        text = _cache_text(opp, minimum_value)
+        cached = db.get_cached_llm_judgment(conn, opp.dedup_key, text)
+        if cached is not None:
+            result[opp.dedup_key] = LLMJudgment(**cached)
+            continue
+        judgment = judge_opportunity(opp, company_profile, api_key, model, minimum_value)
+        if judgment is not None:
+            result[opp.dedup_key] = judgment
+            db.set_cached_llm_judgment(
+                conn, opp.dedup_key, text, judgment.relevant, judgment.confidence, judgment.reasoning, _now_iso(),
+            )
+    return result

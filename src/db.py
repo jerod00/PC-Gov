@@ -81,6 +81,21 @@ CREATE TABLE IF NOT EXISTS embedding_cache (
     embedding   TEXT NOT NULL,      -- JSON list[float]
     created_at  TEXT NOT NULL
 );
+
+-- Same idea as embedding_cache, for LLM relevance judgments (src/llm_scoring.py).
+-- Before this existed, every in-scope opportunity was re-judged by Claude on
+-- every single run regardless of whether it had been seen (and judged)
+-- yesterday -- the dominant cost of both runtime and API spend, since the
+-- same few hundred listings recur unchanged day after day. Keyed the same
+-- way as embedding_cache: a changed title/description/NAICS/minimum_value
+-- naturally busts the cache since it changes the hash.
+CREATE TABLE IF NOT EXISTS llm_judgment_cache (
+    cache_key   TEXT PRIMARY KEY,   -- f"{dedup_key}:{sha256(text)}"
+    relevant    INTEGER NOT NULL,   -- 0/1
+    confidence  INTEGER NOT NULL,
+    reasoning   TEXT NOT NULL,
+    created_at  TEXT NOT NULL
+);
 """
 
 # Columns added to `opportunities` after the table's original release.
@@ -264,6 +279,36 @@ def set_cached_embedding(conn: sqlite3.Connection, dedup_key: str, text: str, em
         ON CONFLICT(cache_key) DO UPDATE SET embedding = excluded.embedding
         """,
         (_embedding_cache_key(dedup_key, text), json.dumps(embedding), now_iso),
+    )
+
+
+def _llm_judgment_cache_key(dedup_key: str, text: str) -> str:
+    return f"{dedup_key}:{hashlib.sha256(text.encode('utf-8')).hexdigest()}"
+
+
+def get_cached_llm_judgment(conn: sqlite3.Connection, dedup_key: str, text: str) -> Optional[dict]:
+    """Returns {'relevant': bool, 'confidence': int, 'reasoning': str} for
+    this exact (dedup_key, text) pair, or None if not cached (a miss also
+    happens whenever the listing's judged text changes, which is correct)."""
+    row = conn.execute(
+        "SELECT relevant, confidence, reasoning FROM llm_judgment_cache WHERE cache_key = ?",
+        (_llm_judgment_cache_key(dedup_key, text),),
+    ).fetchone()
+    if row is None:
+        return None
+    return {"relevant": bool(row["relevant"]), "confidence": row["confidence"], "reasoning": row["reasoning"]}
+
+
+def set_cached_llm_judgment(conn: sqlite3.Connection, dedup_key: str, text: str,
+                            relevant: bool, confidence: int, reasoning: str, now_iso: str):
+    conn.execute(
+        """
+        INSERT INTO llm_judgment_cache (cache_key, relevant, confidence, reasoning, created_at)
+        VALUES (?, ?, ?, ?, ?)
+        ON CONFLICT(cache_key) DO UPDATE SET
+            relevant = excluded.relevant, confidence = excluded.confidence, reasoning = excluded.reasoning
+        """,
+        (_llm_judgment_cache_key(dedup_key, text), int(relevant), confidence, reasoning, now_iso),
     )
 
 

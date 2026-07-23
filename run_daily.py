@@ -108,14 +108,16 @@ def run(cfg: dict, conn, sam_api_key: str, anthropic_api_key: str, voyage_api_ke
         if semantic_enabled and capability_embeddings:
             opp_embeddings = semantic.embed_opportunities_cached(in_scope_opps, conn, voyage_api_key, semantic_model)
 
+        llm_judgments = {}
+        if llm_enabled:
+            llm_judgments = llm_scoring.judge_opportunities_cached(
+                in_scope_opps, company_profile, conn, anthropic_api_key, llm_model,
+                minimum_value=cfg["scoring"].get("minimum_contract_value"),
+            )
+
         kept = 0
         for opp in in_scope_opps:
-            judgment = None
-            if llm_enabled:
-                judgment = llm_scoring.judge_opportunity(
-                    opp, company_profile, anthropic_api_key, llm_model,
-                    minimum_value=cfg["scoring"].get("minimum_contract_value"),
-                )
+            judgment = llm_judgments.get(opp.dedup_key)
             score, matched, matched_capability = scoring.score_opportunity(
                 opp, cfg, learned_weights, today=today, llm_judgment=judgment,
                 opp_embedding=opp_embeddings.get(opp.dedup_key), capability_embeddings=capability_embeddings,
