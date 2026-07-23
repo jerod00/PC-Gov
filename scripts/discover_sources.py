@@ -66,6 +66,9 @@ ALREADY_KNOWN = [
     "Midland, TX CivicEngage Bids.aspx (source built)",
     "New Orleans, LA nola.gov View bid opportunities (source built; note: main City of "
     "New Orleans procurement channel is BidNet Direct, which is separately rejected above)",
+    "Tulsa, OK cityoftulsa.org Bid Opportunities and Results (source built)",
+    "Oklahoma City, OK (BidNet Direct is the primary channel, rejected above; okc.gov's own "
+    "Bidding page just points to BidNet Direct, no native listing)",
     "Tarrant County, TX Ion Wave portal (robots.txt disallows crawling, checked 2026-07)",
     "Houston, TX Beacon Bid / SAP Ariba (login-gated)",
     "Arkansas state purchasing (mid-migration to SAP Ariba as of mid-2026)",
