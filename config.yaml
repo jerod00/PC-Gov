@@ -421,6 +421,16 @@ sources:
   # name), and its own okc.gov page just points back to BidNet Direct,
   # no native listing.
   tulsa: true
+  # Wichita, KS: confirmed live 2026-07-23. Real bid data lives on a
+  # Bonfire subdomain (wichita.bonfirehub.com), not wichita.gov itself --
+  # its robots.txt reads `User-agent: * / Disallow:` (empty, nothing
+  # blocked), matching the seven other Bonfire orgs already open in this
+  # project (Dallas, Fort Worth, Harris County, San Angelo, Waco, Amarillo,
+  # Port of Galveston). The public "Opportunity RSS Feed"
+  # (/opportunities/rss) was independently fetched and matches the shared
+  # bonfire_rss.py item format byte-for-byte -- a third independent
+  # confirmation of that format. See src/sources/wichita_bonfire.py.
+  wichita_bonfire: true
   # Phase 2 — not yet built:
   # Missouri (MissouriBUYS): the platform changed since this project last
   # looked at it. As of 2026-07-21, investigated live: solicitations issued
@@ -582,6 +592,7 @@ source_urls:
   midland: "https://www.midlandtexas.gov/Bids.aspx"
   new_orleans: "https://nola.gov/view-bid-opportunities/"
   tulsa: "https://www.cityoftulsa.org/government/departments/finance/selling-to-the-city/bid-opportunities-and-results/"
+  wichita_bonfire: "https://wichita.bonfirehub.com/opportunities/rss"
 
 email:
   digest_min_score_to_include: 25   # opportunities scoring below this are dropped entirely
