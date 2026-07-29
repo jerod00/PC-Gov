@@ -31,6 +31,9 @@ CREATE TABLE IF NOT EXISTS opportunities (
     state             TEXT,
     lat               REAL,
     lon               REAL,
+    poc_name          TEXT,      -- point of contact, when the source exposes one (currently only SAM.gov)
+    poc_email         TEXT,
+    poc_phone         TEXT,
     score             REAL,
     matched_keywords  TEXT,      -- JSON list, snapshot at scoring time
     matched_capability TEXT,     -- name of the best-fit capability profile, if any (see scoring.py)
@@ -105,6 +108,9 @@ CREATE TABLE IF NOT EXISTS llm_judgment_cache (
 _MIGRATIONS = [
     ("opportunities", "nigp_codes", "TEXT"),
     ("opportunities", "matched_capability", "TEXT"),
+    ("opportunities", "poc_name", "TEXT"),
+    ("opportunities", "poc_email", "TEXT"),
+    ("opportunities", "poc_phone", "TEXT"),
 ]
 
 
@@ -161,9 +167,9 @@ def upsert_scored(conn: sqlite3.Connection, opp: Opportunity, score: float, matc
         INSERT INTO opportunities (
             dedup_key, source_id, notice_id, title, agency, url, description,
             naics_code, psc_code, nigp_codes, value, set_aside, posted_date, response_deadline,
-            city, state, lat, lon, score, matched_keywords, matched_capability, reason,
-            first_seen_at, emailed_at
-        ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, NULL)
+            city, state, lat, lon, poc_name, poc_email, poc_phone, score, matched_keywords,
+            matched_capability, reason, first_seen_at, emailed_at
+        ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, NULL)
         ON CONFLICT(dedup_key) DO UPDATE SET
             score = excluded.score,
             matched_keywords = excluded.matched_keywords,
@@ -174,8 +180,8 @@ def upsert_scored(conn: sqlite3.Connection, opp: Opportunity, score: float, matc
             opp.dedup_key, opp.source_id, opp.notice_id, opp.title, opp.agency, opp.url,
             opp.description, opp.naics_code, opp.psc_code, json.dumps(opp.nigp_codes or []),
             opp.value, opp.set_aside, _iso(opp.posted_date), _iso(opp.response_deadline),
-            opp.city, opp.state, opp.lat, opp.lon, score, json.dumps(matched_keywords),
-            matched_capability, reason, now_iso,
+            opp.city, opp.state, opp.lat, opp.lon, opp.poc_name, opp.poc_email, opp.poc_phone,
+            score, json.dumps(matched_keywords), matched_capability, reason, now_iso,
         ),
     )
 

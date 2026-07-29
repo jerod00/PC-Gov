@@ -33,6 +33,14 @@ class Opportunity:
     posted_date: Optional[date] = None
     response_deadline: Optional[date] = None
 
+    # Point of contact, when the source exposes one (currently only SAM.gov's
+    # pointOfContact field) -- who to reach out to about this notice, or about
+    # future similar work from the same office. None for sources that don't
+    # have this data rather than guessing.
+    poc_name: Optional[str] = None
+    poc_email: Optional[str] = None
+    poc_phone: Optional[str] = None
+
     # Location, when the source provides it. city/state are used for the
     # human-readable digest; lat/lon (when known) drive the proximity score.
     # For federal (SAM.gov) and Texas state/local, distance is not checked —

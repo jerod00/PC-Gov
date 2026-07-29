@@ -43,6 +43,8 @@ Every weekday morning, `run_daily.py`:
 4. Scores every new opportunity against `config.yaml`'s keywords/weights and stores it in SQLite, deduped by notice number so nothing is ever emailed twice. If `ANTHROPIC_API_KEY` is set and `llm_scoring.enabled` is true, each opportunity also gets a quick relevance judgment from Claude — this catches genuine fits that don't happen to use any configured keyword, and supplies a plain-English fit reason for the digest.
 5. Emails a ranked HTML digest — or a short "nothing new today" email if nothing qualified, so you know it's still running.
 
+**Point of contact (2026-07-29):** SAM.gov's API includes a real `pointOfContact` field per notice (name/email/phone) — confirmed against SAM.gov's published API schema, not guessed. `sam_gov.py` now parses this (preferring the entry typed "primary") into the `Opportunity`'s `poc_name`/`poc_email`/`poc_phone` fields, which flow through the DB and show up as a "Contact:" line in the digest whenever present — useful both for the current notice and for reaching out about future similar work from the same office. Every other source leaves these fields `None` (no source scraped so far exposes contact data), so the digest simply omits the line for those rows rather than showing empty contact info.
+
 ## Project layout
 
 ```
@@ -195,6 +197,7 @@ Get-ScheduledTaskInfo -TaskName "PC-Gov Opportunity Digest" # check last run res
 Everything you'd want to adjust without touching code lives here:
 
 - **`sam_gov.naics_codes` / `psc_codes`** — add/remove codes as your product mix shifts.
+- **`sam_gov.lookback_days`** — how many days back each run's SAM.gov query looks for newly posted/modified notices (currently 3, widened 2026-07-29 from 1 as a safety net against a missed run day; re-fetching an already-seen notice is a harmless no-op since dedup is by `notice_id`).
 - **`keywords`** — four buckets (`high_value`, `medium_value`, `low_value`, `negative`), each with a `weight` and a `terms` list. Add phrases you see relevant postings using that the current list misses; add negative terms for false-positive patterns you keep seeing.
 - **`capabilities`** — named capability profiles (own keywords + NAICS/PSC/NIGP codes + a description used for semantic similarity); see [Capability profile & matching engine](#capability-profile--matching-engine) above. Add a new entry any time Pal-Con adds a genuinely distinct capability.
 - **`scoring.weights`** — how much each factor (keyword match, NAICS/PSC match, capability match, contract value, set-aside, proximity, deadline urgency, LLM judgment) contributes to the final score.

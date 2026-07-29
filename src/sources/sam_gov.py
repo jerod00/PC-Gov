@@ -63,6 +63,20 @@ def _fetch_description(notice_id: str, desc_field: str, api_key: str) -> str:
         return ""
 
 
+def _primary_contact(raw: dict):
+    """Returns (name, email, phone) from SAM.gov's pointOfContact list, or
+    (None, None, None) if the notice has none. Confirmed field shape via
+    SAM.gov's published API schema (open.gsa.gov/api/opportunities-api):
+    a list of {type, title, fullName, email, phone, fax, additionalInfo}
+    entries -- prefers the entry with type "primary", falling back to
+    whichever comes first when no entry is explicitly typed primary."""
+    contacts = raw.get("pointOfContact") or []
+    if not contacts:
+        return None, None, None
+    primary = next((c for c in contacts if c.get("type") == "primary"), contacts[0])
+    return primary.get("fullName"), primary.get("email"), primary.get("phone")
+
+
 def _parse_date(s: str):
     if not s:
         return None
@@ -89,6 +103,8 @@ def _to_opportunity(raw: dict, api_key: str, fetch_full_description: bool) -> Op
         except (TypeError, ValueError):
             value = None
 
+    poc_name, poc_email, poc_phone = _primary_contact(raw)
+
     return Opportunity(
         notice_id=notice_id,
         source_id="sam_gov",
@@ -104,6 +120,9 @@ def _to_opportunity(raw: dict, api_key: str, fetch_full_description: bool) -> Op
         response_deadline=_parse_date(raw.get("responseDeadLine")),
         city=pop.get("city", {}).get("name") if isinstance(pop.get("city"), dict) else pop.get("city"),
         state=pop.get("state", {}).get("code") if isinstance(pop.get("state"), dict) else pop.get("state"),
+        poc_name=poc_name,
+        poc_email=poc_email,
+        poc_phone=poc_phone,
         raw=raw,
     )
 

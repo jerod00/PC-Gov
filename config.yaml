@@ -250,7 +250,10 @@ sam_gov:
     # coverage there relies on NAICS 238910 above plus the keyword list below.
 
   # How far back to look for newly posted/modified notices each run (days).
-  lookback_days: 1
+  # 3 (not 1) as a safety net against a missed run day -- dedup by notice_id
+  # means an already-seen notice re-fetched on a later day is a harmless
+  # no-op (upsert_scored only refreshes score/reason, never re-emails it).
+  lookback_days: 3
 
 # -----------------------------------------------------------------------------
 # Keyword matching — applied to title + description across ALL sources.

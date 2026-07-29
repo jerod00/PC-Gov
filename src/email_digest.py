@@ -31,12 +31,20 @@ def _format_deadline(deadline_str):
     return deadline_str or "Not listed"
 
 
+def _format_contact(row: dict) -> str:
+    """Plain-text 'Name (email, phone)' from whatever poc_* fields are
+    present, or '' if the source has none (currently only SAM.gov)."""
+    bits = [row[k] for k in ("poc_name", "poc_email", "poc_phone") if row.get(k)]
+    return " / ".join(bits)
+
+
 def _share_link(row: dict) -> str:
     """Blank-recipient mailto: so whoever's forwarding it just types in who
     it's going to -- prefilled with everything about the job so nobody has
     to hand-copy details out of the digest."""
     subject = quote(f"Opportunity: {row['title']}")
     location = ", ".join(part for part in (row.get("city"), row.get("state")) if part)
+    contact = _format_contact(row)
     body_lines = [
         row["title"],
         f"Agency: {row.get('agency') or 'Not listed'}",
@@ -44,6 +52,7 @@ def _share_link(row: dict) -> str:
         f"NAICS: {row.get('naics_code') or '—'}    PSC: {row.get('psc_code') or '—'}",
         f"Estimated value: {_format_value(row.get('value'))}",
         f"Response deadline: {_format_deadline(row.get('response_deadline'))}",
+        f"Point of contact: {contact}" if contact else None,
         "",
         f"Details / submit: {row['url']}",
         "",
@@ -51,6 +60,19 @@ def _share_link(row: dict) -> str:
     ]
     body = quote("\n".join(line for line in body_lines if line is not None))
     return f"mailto:?subject={subject}&body={body}"
+
+
+def _contact_html(row: dict) -> str:
+    """'' when the source has no point-of-contact data (most sources) --
+    currently only SAM.gov populates poc_*."""
+    if not row.get("poc_name") and not row.get("poc_email") and not row.get("poc_phone"):
+        return ""
+    bits = [escape(row["poc_name"])] if row.get("poc_name") else []
+    if row.get("poc_email"):
+        bits.append(f'<a href="mailto:{escape(row["poc_email"])}" style="color:#1a4d8f;">{escape(row["poc_email"])}</a>')
+    if row.get("poc_phone"):
+        bits.append(escape(row["poc_phone"]))
+    return f'<div style="font-size:12px;color:#777;margin-top:4px;">Contact: {" &nbsp;/&nbsp; ".join(bits)}</div>'
 
 
 def _row_html(row: dict, feedback_address: str) -> str:
@@ -70,6 +92,7 @@ def _row_html(row: dict, feedback_address: str) -> str:
           Value: {_format_value(row.get('value'))} &nbsp;|&nbsp;
           Deadline: {_format_deadline(row.get('response_deadline'))}
         </div>
+        {_contact_html(row)}
         <div style="font-size:13px;color:#2a6b2a;margin-top:6px;">{escape(row.get('reason') or '')}</div>
         <div style="font-size:12px;margin-top:8px;">
           <a href="{good_link}" style="color:#1a7a1a;margin-right:14px;">&#128077; Good match</a>
