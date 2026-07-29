@@ -18,7 +18,8 @@ company:
   capabilities_description: >
     Palcon is a large metal fabrication shop based in Stephenville, TX. Core
     capabilities: gas turbine ducts, air inlet filter housings, expansion
-    joints, skids, and other large fabricated metal structures/assemblies.
+    joints, skids, pre-engineered/prefabricated metal buildings, and other
+    large fabricated metal structures/assemblies.
     Palcon also offers hydrovac (vacuum) excavation services — non-destructive
     digging for utility locating/exposure, potholing, and similar site work.
     We do NOT do: retail/consumer goods, generic janitorial or facility
@@ -169,6 +170,29 @@ capabilities:
       - "Pressure Vessel"
       - "Pipe"
 
+  - name: "Pre-engineered metal buildings"
+    description: >
+      Pre-engineered and prefabricated metal buildings — building shells,
+      component systems (framing, panels, girts, purlins), and erection for
+      industrial/commercial metal building projects.
+    keywords:
+      - "metal building"
+      - "pre-engineered building"
+      - "pre-engineered metal building"
+      - "prefabricated metal building"
+      - "PEMB"
+      - "metal building system"
+      - "building shell"
+    naics_codes:
+      - "332311"  # Prefabricated Metal Building and Component Manufacturing
+      - "238120"  # Structural Steel and Precast Concrete Contractors (erection)
+    psc_codes:
+      - "5410"  # Prefabricated and Portable Buildings
+      - "5411"  # Prefabricated Building Modules/Sections
+    nigp_codes:
+      - "Metal Building"
+      - "Prefabricated Building"
+
   - name: "Hydrovac / vacuum excavation services"
     description: >
       Hydrovac (hydro-excavation / vacuum excavation) services — non-
@@ -250,6 +274,10 @@ keywords:
       - "structural steel fabrication"
       - "fabricated steel"
       - "metal fabrication"
+      - "metal building"
+      - "pre-engineered building"
+      - "pre-engineered metal building"
+      - "prefabricated metal building"
       - "skid package"
       - "equipment skid"
       - "hydrovac"
