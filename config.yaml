@@ -18,8 +18,9 @@ company:
   capabilities_description: >
     Palcon is a large metal fabrication shop based in Stephenville, TX. Core
     capabilities: gas turbine ducts, air inlet filter housings, expansion
-    joints, skids, pre-engineered/prefabricated metal buildings, and other
-    large fabricated metal structures/assemblies.
+    joints, skids, pre-engineered/prefabricated metal buildings, machined
+    parts/components (CNC and precision machining, replacement parts), and
+    other large fabricated metal structures/assemblies.
     Palcon also offers hydrovac (vacuum) excavation services — non-destructive
     digging for utility locating/exposure, potholing, and similar site work.
     We do NOT do: retail/consumer goods, generic janitorial or facility
@@ -193,6 +194,34 @@ capabilities:
       - "Metal Building"
       - "Prefabricated Building"
 
+  - name: "Machined parts & components"
+    description: >
+      Machined metal parts and components -- CNC/precision machining,
+      turned and milled parts, and replacement/spare parts machining --
+      as a distinct capability from large-structure fabrication, since
+      "machine shop" solicitations are coded and worded differently than
+      structural steel or skid work.
+    keywords:
+      - "machine shop"
+      - "machining services"
+      - "CNC machining"
+      - "machined parts"
+      - "machined components"
+      - "precision machining"
+      - "turned parts"
+      - "milled parts"
+      - "custom machining"
+      - "replacement parts machining"
+    naics_codes:
+      - "332710"  # Machine Shops
+      - "332721"  # Precision Turned Product Manufacturing
+    psc_codes: []  # no single PSC/FSC code covers "machined parts" generically -- PSC classifies by
+      # end-item (e.g. turbine parts, pump parts), not by machining method -- rather than guess one,
+      # this relies on NAICS + keywords, same precedent as hydrovac below
+    nigp_codes:
+      - "Machining"
+      - "Machine Shop"
+
   - name: "Hydrovac / vacuum excavation services"
     description: >
       Hydrovac (hydro-excavation / vacuum excavation) services — non-
@@ -235,6 +264,8 @@ sam_gov:
     - "333611"  # Turbine and Turbine Generator Set Units Manufacturing
     - "238120"  # Structural Steel and Precast Concrete Contractors
     - "238910"  # Site Preparation Contractors (standard NAICS for excavation, incl. hydrovac)
+    - "332710"  # Machine Shops
+    - "332721"  # Precision Turned Product Manufacturing
 
   # Product/Service Codes (federal contracting FSC/PSC families). These are a
   # starting point, not gospel — cross-check against SAM.gov's PSC list and
@@ -283,6 +314,9 @@ keywords:
       - "prefabricated metal building"
       - "skid package"
       - "equipment skid"
+      - "machine shop"
+      - "machined parts"
+      - "precision machining"
       - "hydrovac"
       - "hydro excavation"
       - "hydro-excavation"
@@ -310,6 +344,10 @@ keywords:
       - "pipe spool"
       - "platform structure"
       - "equipment enclosure"
+      - "machining"
+      - "CNC"
+      - "turned parts"
+      - "milled parts"
 
   low_value:       # generic, only worth a small nudge
     weight: 3
