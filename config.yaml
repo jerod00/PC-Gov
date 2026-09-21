@@ -349,6 +349,9 @@ keywords:
       - "machine shop"
       - "machined parts"
       - "precision machining"
+      - "mill-turn"       # Mazak INTEGREX-specific: catches SAM.gov notices coded outside our
+      - "turbine shaft"   # NAICS list (336412/811310) that a title-only keyword search would
+      - "in-process grinding"  # otherwise miss entirely -- see config.yaml capabilities' machining entry
       - "hydrovac"
       - "hydro excavation"
       - "hydro-excavation"
