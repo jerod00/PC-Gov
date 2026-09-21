@@ -20,7 +20,13 @@ company:
     capabilities: gas turbine ducts, air inlet filter housings, expansion
     joints, skids, pre-engineered/prefabricated metal buildings, machined
     parts/components (CNC and precision machining, replacement parts), and
-    other large fabricated metal structures/assemblies.
+    other large fabricated metal structures/assemblies. Palcon operates a
+    Mazak INTEGREX i-350S NEO AG multi-tasking mill-turn-grind CNC (up to
+    26.4in/670mm turning diameter, parts to ~98in long), well suited to large
+    turbine/energy-sector shafts, rotors, and housings, and to MRO
+    replacement-parts remanufacturing (grinding worn components back to
+    spec) — not medical or automotive machining, which is outside Palcon's
+    customer base.
     Palcon also offers hydrovac (vacuum) excavation services — non-destructive
     digging for utility locating/exposure, potholing, and similar site work.
     We do NOT do: retail/consumer goods, generic janitorial or facility
@@ -197,10 +203,20 @@ capabilities:
   - name: "Machined parts & components"
     description: >
       Machined metal parts and components -- CNC/precision machining,
-      turned and milled parts, and replacement/spare parts machining --
-      as a distinct capability from large-structure fabrication, since
-      "machine shop" solicitations are coded and worded differently than
-      structural steel or skid work.
+      turned and milled parts, replacement/spare parts machining, and
+      large-diameter mill-turn work with integrated grinding (Palcon's
+      Mazak INTEGREX i-350S NEO AG: up to 26.4in/670mm turning diameter,
+      parts to ~98in long, multi-tasking mill-turn-grind in one setup --
+      confirmed via Mazak's own published specs, 2026-09-21). Distinct
+      from large-structure fabrication, since "machine shop"/aerospace-
+      engine-parts solicitations are coded and worded differently than
+      structural steel or skid work. This capability specifically
+      covers what the INTEGREX is suited for: large turbine/energy-
+      sector shafts, rotors, and housings, and MRO/replacement-parts
+      remanufacturing (grinding worn components back to spec) -- not
+      medical or automotive production, which the machine is also
+      marketed for but which fall outside Palcon's actual customer base
+      and this project's government-contract focus.
     keywords:
       - "machine shop"
       - "machining services"
@@ -212,15 +228,28 @@ capabilities:
       - "milled parts"
       - "custom machining"
       - "replacement parts machining"
+      - "mill-turn"
+      - "multi-tasking machining"
+      - "large diameter turned parts"
+      - "turbine shaft machining"
+      - "turbine rotor"
+      - "impeller machining"
+      - "in-process grinding"
+      - "5-axis machining"
     naics_codes:
       - "332710"  # Machine Shops
       - "332721"  # Precision Turned Product Manufacturing
-    psc_codes: []  # no single PSC/FSC code covers "machined parts" generically -- PSC classifies by
-      # end-item (e.g. turbine parts, pump parts), not by machining method -- rather than guess one,
-      # this relies on NAICS + keywords, same precedent as hydrovac below
+      - "336412"  # Aircraft Engine and Engine Parts Manufacturing (turbine/aerospace engine components)
+      - "811310"  # Commercial and Industrial Machinery and Equipment Repair and Maintenance (MRO/replacement parts)
+    psc_codes:
+      - "2840"  # Gas Turbines and Jet Engines, Aircraft, Prime Moving -- a real, stable FSC/PSC
+      # end-item code, added now that turbine-engine-parts NAICS (336412) is in scope above.
+      # No broader "machining" PSC exists -- PSC classifies by end-item, not machining method,
+      # so beyond this one this still relies on NAICS + keywords, same precedent as hydrovac below.
     nigp_codes:
       - "Machining"
       - "Machine Shop"
+      - "Turbine Parts"
 
   - name: "Hydrovac / vacuum excavation services"
     description: >
@@ -266,6 +295,8 @@ sam_gov:
     - "238910"  # Site Preparation Contractors (standard NAICS for excavation, incl. hydrovac)
     - "332710"  # Machine Shops
     - "332721"  # Precision Turned Product Manufacturing
+    - "336412"  # Aircraft Engine and Engine Parts Manufacturing (turbine/aerospace engine components -- Mazak INTEGREX mill-turn-grind)
+    - "811310"  # Commercial and Industrial Machinery and Equipment Repair and Maintenance (MRO/replacement-parts remanufacturing)
 
   # Product/Service Codes (federal contracting FSC/PSC families). These are a
   # starting point, not gospel — cross-check against SAM.gov's PSC list and
@@ -277,6 +308,7 @@ sam_gov:
     - "5420"  # Bridges, Fixed and Floating
     - "4730"  # Miscellaneous Pipe, Tube, Hose, and Fittings
     - "3441"  # Bending and Forming Machines
+    - "2840"  # Gas Turbines and Jet Engines, Aircraft, Prime Moving
     # No PSC code added for hydrovac/excavation work -- rather than guess one,
     # coverage there relies on NAICS 238910 above plus the keyword list below.
 
